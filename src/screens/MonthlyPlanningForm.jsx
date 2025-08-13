@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const MonthlyPlanningForm = () => {
@@ -11,13 +12,13 @@ const MonthlyPlanningForm = () => {
   const [monthlyTarget, setMonthlyTarget] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/enquiries')
-      .then(res => {
-        const confirmedProjects = res.data.filter(e => e.stage === 'Confirmed');
-        setProjects(confirmedProjects);
-      })
-      .catch(err => console.error('Error fetching projects:', err));
-  }, []);
+  api.get('/enquiries') // ✅ no localhost hardcode
+    .then(res => {
+      const confirmedProjects = res.data.filter(e => e.stage === 'Confirmed');
+      setProjects(confirmedProjects);
+    })
+    .catch(err => console.error('Error fetching projects:', err));
+}, []);
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -35,7 +36,7 @@ const MonthlyPlanningForm = () => {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/production/monthly-planning', payload);
+      await api.post('/production/monthly-planning', payload);
       alert('✅ Monthly plan submitted!');
       setSelectedProjectId('');
       setMonth(null);

@@ -8,10 +8,10 @@ const SalesKPIScreen = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/enquiries/orders');
+        const res = await api.get('/enquiries/orders');
 
         // Step 1: Compute delivery map from existing daily updates
-        const updatesRes = await axios.get('http://localhost:5000/api/daily-updates');
+        const updatesRes = await api.get('/daily-updates');
         const updates = updatesRes.data;
 
         const deliveredMap = {};

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const DailyUpdateForm = () => {
@@ -20,25 +21,29 @@ const DailyUpdateForm = () => {
 
   // ✅ Fetch projects and past updates on mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const projRes = await axios.get('http://localhost:5000/api/enquiries/orders');
-        const updatesRes = await axios.get('http://localhost:5000/api/daily-updates');
+  const fetchData = async () => {
+    try {
+      const [projRes, updatesRes] = await Promise.all([
+        api.get('/enquiries/orders'),
+        api.get('/daily-updates')
+      ]);
 
-        const projectList = projRes.data.orders || [];
-        setProjects(projectList);
-        setUpdates(updatesRes.data || []);
+      const projectList = Array.isArray(projRes.data?.orders) ? projRes.data.orders : [];
+      setProjects(projectList);
 
-        if (projectList.length > 0) {
-          setSelectedProjectId(projectList[0].projectId); // auto-select first
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
+      const updates = Array.isArray(updatesRes.data) ? updatesRes.data : [];
+      setUpdates(updates);
+
+      if (projectList.length > 0) {
+        setSelectedProjectId(projectList[0].projectId); // auto-select first
       }
-    };
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
 
   // ✅ Update project details whenever selected project or updates change
   useEffect(() => {
@@ -67,13 +72,13 @@ const DailyUpdateForm = () => {
         wagonSold: parseInt(formData.wagonSoldToday, 10),
       };
 
-      await axios.post('http://localhost:5000/api/daily-updates', payload);
-      alert('✅ Update saved successfully');
+       await api.post('/daily-updates', payload);
+    alert('✅ Update saved successfully');
       setFormData({ ...formData, wagonSoldToday: '' });
 
       // 🔁 Refresh data instead of reload
-      const updatesRes = await axios.get('http://localhost:5000/api/daily-updates');
-      setUpdates(updatesRes.data || []);
+      const updatesRes = await api.get('/daily-updates'); // ✅ no hardcoded localhost
+setUpdates(updatesRes.data || []);
     } catch (err) {
       console.error('Error submitting update:', err);
       alert('❌ Failed to save update');

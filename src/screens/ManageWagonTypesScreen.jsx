@@ -16,7 +16,7 @@ const ManageWagonTypesScreen = () => {
   }, []);
 
   const fetchConfigs = async () => {
-    const res = await axios.get('http://localhost:5000/api/wagons');
+    const res = await api.get('/wagons');
     setConfigs(res.data);
   };
 
@@ -66,7 +66,7 @@ const ManageWagonTypesScreen = () => {
     if (editId) {
       await axios.patch(`http://localhost:5000/api/wagons/${editId}`, payload);
     } else {
-      await axios.post('http://localhost:5000/api/wagons', payload);
+      await api.post('/wagons', payload);
     }
 
     fetchConfigs();

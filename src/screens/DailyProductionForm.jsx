@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const DailyProductionForm = () => {
@@ -35,7 +36,7 @@ const DailyProductionForm = () => {
   ];
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/enquiries/orders')
+    api.get('/enquiries/orders')
       .then(res => {
         const data = Array.isArray(res.data.orders) ? res.data.orders : [];
         const confirmedOnly = data.filter(item =>
@@ -105,7 +106,7 @@ const DailyProductionForm = () => {
     };
 
     try {
-      await axios.post('http://localhost:5000/api/production/daily-wagon-update', payload);
+      await api.post('/production/daily-wagon-update', payload);
       alert('✅ Daily production log saved!');
       setPartsProduced({});
       setStagesCompleted({});

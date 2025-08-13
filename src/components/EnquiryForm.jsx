@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const EnquiryFormScreen = () => {
@@ -28,7 +29,7 @@ const EnquiryFormScreen = () => {
   const [wagonOptions, setWagonOptions] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/wagons')
+     api.get('/wagons')
       .then(res => {
         const types = res.data.map(w => w.wagonType);
         setWagonOptions(types);
@@ -102,7 +103,7 @@ const EnquiryFormScreen = () => {
         attachment: Array.isArray(form['Attachment']) ? form['Attachment'] : []
       };
 
-      const res = await axios.post('http://localhost:5000/api/enquiries', payload);
+      const res = await api.post('/enquiries', payload);
       alert(`✅ Enquiry submitted! Your Order ID is ${res.data.orderId}`);
 
       setForm({

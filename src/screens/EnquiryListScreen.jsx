@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const EnquiryListScreen = () => {
@@ -25,10 +26,10 @@ const EnquiryListScreen = () => {
     try {
       // Fetch enquiries, daily updates, and confirmed orders
       const [enquiryRes, updatesRes, ordersRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/enquiries'),
-        axios.get('http://localhost:5000/api/daily-updates'),
-        axios.get('http://localhost:5000/api/enquiries/orders')
-      ]);
+  api.get('/enquiries'),
+  api.get('/daily-updates'),
+  api.get('/enquiries/orders')
+]);
 
       const enquiriesData = enquiryRes.data;
       const updatesData = updatesRes.data;
@@ -97,7 +98,7 @@ const totalOrderInHand = enquiries
 // ✅ Handle stage change and update local state
 const handleStageChange = async (id, newStage) => {
   try {
-    await axios.patch(`http://localhost:5000/api/enquiries/${id}`, { stage: newStage });
+     await api.patch(`/enquiries/${id}`, { stage: newStage }); 
     setEnquiries(prev =>
       prev.map(enquiry =>
         enquiry._id === id ? { ...enquiry, stage: newStage } : enquiry
@@ -152,7 +153,7 @@ useEffect(() => {
     if (!fromDate || !toDate) return;
 
     try {
-      const res = await axios.get('http://localhost:5000/api/daily-updates');
+      const res = await api.get('/daily-updates'); 
 
       const filtered = res.data.filter(update => {
         const updateDate = new Date(update.date);

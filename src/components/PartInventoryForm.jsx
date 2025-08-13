@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
+import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const PartInventoryForm = ({ onProjectChange, inventoryProjectId, liveInventory }) => {
@@ -14,7 +15,7 @@ const PartInventoryForm = ({ onProjectChange, inventoryProjectId, liveInventory 
 
   // ✅ Fetch confirmed projects
   useEffect(() => {
-    axios.get('http://localhost:5000/api/enquiries/orders')
+    api.get('/enquiries/orders')
       .then(res => {
         const confirmed = res.data.orders.filter(item =>
           (item.stage || '').toLowerCase().includes('confirm')
@@ -28,7 +29,7 @@ const PartInventoryForm = ({ onProjectChange, inventoryProjectId, liveInventory 
     const project = projects.find(p => p.projectId === selectedProject);
     if (project) {
       setWagonType(project.wagonType);
-      axios.get('http://localhost:5000/api/wagons')
+      api.get('/wagons')
         .then(res => {
           const config = res.data.find(w => w.wagonType === project.wagonType);
           setParts(config ? config.parts : []);
@@ -74,7 +75,7 @@ const PartInventoryForm = ({ onProjectChange, inventoryProjectId, liveInventory 
     };
 
     try {
-      await axios.post('http://localhost:5000/api/inventory/add', payload);
+      await api.post('/inventory/add', payload);
       alert('✅ Inventory saved');
       setQuantities({});
       onProjectChange?.(selectedProject); // Refresh inventory after save
