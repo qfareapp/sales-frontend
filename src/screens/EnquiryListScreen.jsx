@@ -13,8 +13,8 @@ const EnquiryListScreen = () => {
   const [orders, setOrders] = useState([]);
   const [stageFilter, setStageFilter] = useState('');
   const [clientTypeFilter, setClientTypeFilter] = useState('');
-  const [totalVU, setTotalVU] = useState(0); // 🚆 Pending wagons
-  const [deliveredVU, setDeliveredVU] = useState(0); // 🚚 Delivered wagons
+  const [totalVU, setTotalVU] = useState(0); 
+  const [deliveredVU, setDeliveredVU] = useState(0);
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [filteredSales, setFilteredSales] = useState(0);
@@ -448,7 +448,9 @@ const trelVUs = trelOrders.reduce((sum, o) => sum + (o.pending || 0), 0);
       </div>
 
       {/* ✅ Table */}
-      <table border="1" cellPadding="10" cellSpacing="0" style={{ width: '100%' }}>
+      <div style={{ padding: 0, maxWidth: '100%' }}>
+  <div style={{ width: '100%',overflow: 'scroll', padding: 0 }}>
+    <table border="1" cellPadding="10" cellSpacing="0" >
   <thead>
     <tr>
       <th>Order ID</th>
@@ -559,6 +561,8 @@ const trelVUs = trelOrders.reduce((sum, o) => sum + (o.pending || 0), 0);
     ))}
   </tbody>
 </table>
+</div>
+</div>
     </div>
   );
 };

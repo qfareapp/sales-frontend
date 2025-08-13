@@ -22,28 +22,51 @@ const LayoutWrapper = ({ children }) => {
 
   const [salesOpen, setSalesOpen] = useState(false);
   const [productionOpen, setProductionOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ for hamburger menu
 
   if (isStandalone) {
     return <>{children}</>;
   }
 
+  // ✅ Close sidebar after clicking a link (mobile only)
+  const handleLinkClick = () => {
+    if (window.innerWidth <= 992) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
     <>
+      {/* Navbar */}
       <nav className="navbar custom-navbar fixed-top">
-  <div className="container-fluid">
-    <span className="navbar-brand d-flex align-items-center">
-      <img src="/Texmaco logo.png" alt="Logo" style={{ height: '40px', marginRight: '10px' }} />
-      <span className="brand-title">TexView</span>
-    </span>
-  </div>
-</nav>
+        <div className="container-fluid d-flex justify-content-between align-items-center">
+          
+
+          <span className="navbar-brand d-flex align-items-center w-100 m-0  justify-content-between">
+            <img src="/Texmaco logo.png" alt="Logo" style={{ height: '40px', marginRight: '10px' }} />
+            <span className="brand-title">TexView</span>
+            {/* Hamburger Button */}
+          <button
+            className="hamburger-btn d-lg-none border rounded p-1 bg-white text-dark"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            ☰
+          </button>
+          </span>
+
+          
+        </div>
+      </nav>
 
 
-      {/* 🔹 Sidebar */}
-      <div className="sidebar bg-dark text-white">
+      {/* Sidebar */}
+      <div className={`sidebar bg-dark text-white ${sidebarOpen ? 'open' : ''}`}>
         <ul className="nav flex-column mt-3">
-          <li className="nav-item"><Link to="/" className="nav-link text-white">➕ Home</Link></li>
-          {/* 🔸 Sales Toggle */}
+          <li className="nav-item">
+            <Link to="/" className="nav-link text-white" onClick={handleLinkClick}>➕ Home</Link>
+          </li>
+
+          {/* Sales Menu */}
           <li className="nav-item">
             <span
               onClick={() => setSalesOpen(!salesOpen)}
@@ -54,23 +77,15 @@ const LayoutWrapper = ({ children }) => {
             </span>
             {salesOpen && (
               <ul className="nav flex-column ms-3">
-                <li className="nav-item">
-                  <Link to="/enquiryForm" className="nav-link text-white">➕ New Enquiry</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/enquiries" className="nav-link text-white">📋 View Enquiries</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/daily-update" className="nav-link text-white">🛠️ Daily Update</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/sales-kpi" className="nav-link text-white">📈 Sales KPI</Link>
-                </li>
+                <li><Link to="/enquiryForm" className="nav-link text-white" onClick={handleLinkClick}>➕ New Enquiry</Link></li>
+                <li><Link to="/enquiries" className="nav-link text-white" onClick={handleLinkClick}>📋 View Enquiries</Link></li>
+                <li><Link to="/daily-update" className="nav-link text-white" onClick={handleLinkClick}>🛠️ Daily Update</Link></li>
+                <li><Link to="/sales-kpi" className="nav-link text-white" onClick={handleLinkClick}>📈 Sales KPI</Link></li>
               </ul>
             )}
           </li>
 
-          {/* 🔸 Production Toggle */}
+          {/* Production Menu */}
           <li className="nav-item mt-3">
             <span
               onClick={() => setProductionOpen(!productionOpen)}
@@ -81,28 +96,19 @@ const LayoutWrapper = ({ children }) => {
             </span>
             {productionOpen && (
               <ul className="nav flex-column ms-3">
-                <li className="nav-item">
-                  <Link to="/production" className="nav-link text-white">📊 Dashboard</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/monthly-planning" className="nav-link text-white">📅 Monthly Planning</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/daily-production" className="nav-link text-white">🛠️ Daily Production Update</Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/manage-wagon-types" className="nav-link text-white">⚙️ Manage Wagon Types</Link>
-                </li>
+                <li><Link to="/production" className="nav-link text-white" onClick={handleLinkClick}>📊 Dashboard</Link></li>
+                <li><Link to="/monthly-planning" className="nav-link text-white" onClick={handleLinkClick}>📅 Monthly Planning</Link></li>
+                <li><Link to="/daily-production" className="nav-link text-white" onClick={handleLinkClick}>🛠️ Daily Production Update</Link></li>
+                <li><Link to="/manage-wagon-types" className="nav-link text-white" onClick={handleLinkClick}>⚙️ Manage Wagon Types</Link></li>
               </ul>
             )}
           </li>
         </ul>
       </div>
+      
 
-      {/* 🔹 Main Content */}
-      <div className="main-content">
-        {children}
-      </div>
+      {/* Main content */}
+      <div className="main-content">{children}</div>
     </>
   );
 };
