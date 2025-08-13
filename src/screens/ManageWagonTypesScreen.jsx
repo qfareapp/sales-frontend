@@ -64,7 +64,7 @@ const ManageWagonTypesScreen = () => {
     };
 
     if (editId) {
-      await axios.patch(`http://localhost:5000/api/wagons/${editId}`, payload);
+      await api.patch(`/wagons/${editId}`, payload);
     } else {
       await api.post('/wagons', payload);
     }
@@ -82,7 +82,7 @@ const ManageWagonTypesScreen = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this configuration?')) {
-      await axios.delete(`http://localhost:5000/api/wagons/${id}`);
+      await api.delete(`/wagons/${id}`);
       fetchConfigs();
     }
   };

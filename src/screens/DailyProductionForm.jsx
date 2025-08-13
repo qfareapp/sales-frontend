@@ -57,13 +57,13 @@ const DailyProductionForm = () => {
     setWagonType(type);
 
     // ✅ Fetch inventory for selected project
-    axios.get(`http://localhost:5000/api/production/parts/${selectedProject}`)
+    api.get(`/production/parts/${selectedProject}`)
       .then(res => {
         setPartInventory(res.data);
       });
 
     // ✅ Fetch BOM for selected wagon type
-    axios.get(`http://localhost:5000/api/bom/${type}`)
+    api.get(`/bom/${type}`)
       .then(res => {
         setWagonBOM(res.data); // { Underframe: 1, Roof: 1, Body Side: 2, ... }
       });

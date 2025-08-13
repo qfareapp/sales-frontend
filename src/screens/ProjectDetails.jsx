@@ -11,7 +11,7 @@ const ProjectDetails = () => {
   useEffect(() => {
     const fetchEnquiry = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/enquiries/${id}`);
+        const res = await api.get(`/enquiries/${id}`);
         setEnquiry(res.data);
       } catch (err) {
         console.error('Error fetching enquiry:', err);
@@ -28,7 +28,7 @@ const ProjectDetails = () => {
     newFiles.forEach(file => formData.append('files', file));
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/enquiries/${id}/attachments`, formData, {
+      const res = await api.post(`/enquiries/${id}/attachments`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setEnquiry(prev => ({
@@ -52,7 +52,7 @@ const ProjectDetails = () => {
     ];
 
     try {
-      const res = await axios.patch(`http://localhost:5000/api/enquiries/${id}`, {
+      const res = await api.patch(`/enquiries/${id}`, {
         comments: updatedComments
       });
 

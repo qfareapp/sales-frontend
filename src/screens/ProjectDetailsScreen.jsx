@@ -9,7 +9,7 @@ const ProjectDetailsScreen = () => {
   useEffect(() => {
     const fetchProjectData = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/enquiries/project-summary/${projectId}`);
+        const res = await api.get(`/enquiries/project-summary/${projectId}`);
         setProjectData(res.data);
       } catch (err) {
         console.error('Failed to fetch project data:', err);

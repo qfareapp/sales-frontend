@@ -7,7 +7,7 @@ const OrderBookScreen = () => {
   useEffect(() => {
     const fetchOrderBook = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/enquiries/orders');
+        const res = await api.get('/enquiries/orders');
         setOrders(res.data);
       } catch (err) {
         console.error('Error fetching order book:', err);

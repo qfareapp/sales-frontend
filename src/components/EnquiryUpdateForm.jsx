@@ -13,8 +13,8 @@ const EnquiryUpdateForm = () => {
   const [wagonOptions, setWagonOptions] = useState([]);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:5000/api/enquiries/${id}`)
+    api
+      .get(`/enquiries/${id}`)
       .then((res) => {
         setFormData(res.data);
         setPricePerWagon(res.data.pricePerWagon || '');
@@ -28,8 +28,8 @@ const EnquiryUpdateForm = () => {
         setLoading(false);
       });
        // Fetch available wagon types for dropdown
-    axios
-      .get('http://localhost:5000/api/wagons')
+    api
+      .get('/wagons')
       .then((res) => {
         const types = res.data.map(w => w.wagonType);
         setWagonOptions(types);
@@ -84,7 +84,7 @@ const EnquiryUpdateForm = () => {
         }
       }
 
-      await axios.patch(`http://localhost:5000/api/enquiries/${id}`, updated);
+      await api.patch(`/enquiries/${id}`, updated);
       alert('✅ Enquiry updated successfully!');
       navigate('/');
     } catch (err) {

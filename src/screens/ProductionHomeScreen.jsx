@@ -17,8 +17,8 @@ const ProductionHomeScreen = () => {
     const fetchData = async () => {
       try {
         const [orderRes, planRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/enquiries/orders'),
-          axios.get('http://localhost:5000/api/production/monthly-planning')
+          api.get('/enquiries/orders'),
+          api.get('/production/monthly-planning')
         ]);
 
         const ordersArray = Array.isArray(orderRes.data.orders)
@@ -72,7 +72,7 @@ const ProductionHomeScreen = () => {
 // 🔄 Fetch live inventory for selected project
 const fetchLiveInventory = async (projectId) => {
   try {
-    const res = await axios.get(`http://localhost:5000/api/inventory/available/${projectId}`);
+    const res = await api.get(`/inventory/available/${projectId}`);
     setLiveInventory(res.data);
     setInventoryProjectId(projectId);
   } catch (err) {
