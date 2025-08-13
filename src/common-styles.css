@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto&display=swap');
+body {
+  margin: 0;
+    font-family: 'Poppins', sans-serif;
+}
+.fixedNav{
+    width: 200px;
+    position: fixed;
+    left: 0;
+    top: 80px;
+    height:100%
+}
+.topMenu{
+    padding: 15px 40px;
+}
+.topMenu h1,.topMenu h1 img{
+    margin: 0;
+    display: block;
+}
+.topMenu h1 img{
+    margin: 0;
+    display: inline-block;
+    width: 180px;}
