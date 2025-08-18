@@ -85,7 +85,7 @@ const EnquiryUpdateForm = () => {
         }
       }
 
-      await api.patch(`/enquiries/${id}`, updated);
+      await api.post(`/enquiries/${id}`, updated);
       alert('✅ Enquiry updated successfully!');
       navigate('/');
     } catch (err) {

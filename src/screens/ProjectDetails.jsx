@@ -53,7 +53,7 @@ const ProjectDetails = () => {
     ];
 
     try {
-      const res = await api.patch(`/enquiries/${id}`, {
+      const res = await api.post(`/enquiries/${id}`, {
         comments: updatedComments
       });
 
