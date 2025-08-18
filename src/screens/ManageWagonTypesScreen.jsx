@@ -65,10 +65,10 @@ const ManageWagonTypesScreen = () => {
     };
 
     if (editId) {
-      await api.patch(`/wagons/${editId}`, payload);
-    } else {
-      await api.post('/wagons', payload);
-    }
+  await api.post('/wagons', payload);   // use POST for both new + update
+} else {
+  await api.post('/wagons', payload);
+}
 
     fetchConfigs();
     resetForm();
