@@ -25,21 +25,33 @@ const PartInventoryForm = ({ onProjectChange, inventoryProjectId, liveInventory 
   }, []);
 
   // ✅ Fetch BOM parts when a project is selected
-  useEffect(() => {
-    const project = projects.find(p => p.projectId === selectedProject);
-    if (project) {
-      setWagonType(project.wagonType);
-      api.get('/wagons')
-        .then(res => {
-          const config = res.data.find(w => w.wagonType === project.wagonType);
-          setParts(config ? config.parts : []);
-          setQuantities({});
-        });
+useEffect(() => {
+  const project = projects.find(p => p.projectId === selectedProject);
+  if (!project) {
+    setWagonType('');
+    setParts([]);
+    setQuantities({});
+    return;
+  }
 
-      // Notify parent to fetch inventory
-      onProjectChange?.(project.projectId);
-    }
-  }, [selectedProject]);
+  setWagonType(project.wagonType);
+
+  // Prefer the BOM endpoint for clean, case-insensitive fetch
+  api.get(`/wagons/bom/${encodeURIComponent(project.wagonType)}?t=${Date.now()}`)
+    .then(res => {
+      const cfg = res.data;
+      const partsArray = Array.isArray(cfg?.parts) ? cfg.parts : [];
+      setParts(partsArray);
+      setQuantities({});
+    })
+    .catch(err => {
+      console.error('❌ Failed to load wagon config:', err);
+      setParts([]);
+    });
+
+  // Notify parent to fetch inventory
+  onProjectChange?.(project.projectId);
+}, [selectedProject, projects]);
 
   // ✅ Calculate wagon sets based on BOM and live inventory
   useEffect(() => {
