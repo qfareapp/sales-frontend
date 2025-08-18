@@ -77,7 +77,7 @@ const LayoutWrapper = ({ children }) => {
             </span>
             {salesOpen && (
               <ul className="nav flex-column ms-3">
-                <li><Link to="/enquiryForm" className="nav-link text-white" onClick={handleLinkClick}>➕ New Enquiry</Link></li>
+                <li><Link to="/enquiry-form" className="nav-link text-white" onClick={handleLinkClick}>➕ New Enquiry</Link></li>
                 <li><Link to="/enquiries" className="nav-link text-white" onClick={handleLinkClick}>📋 View Enquiries</Link></li>
                 <li><Link to="/daily-update" className="nav-link text-white" onClick={handleLinkClick}>🛠️ Daily Update</Link></li>
                 <li><Link to="/sales-kpi" className="nav-link text-white" onClick={handleLinkClick}>📈 Sales KPI</Link></li>
@@ -118,7 +118,7 @@ function App() {
     <Router>
       <LayoutWrapper>
         <Routes>
-          <Route path="/enquiryForm" element={<EnquiryForm />} />
+          <Route path="/enquiry-form" element={<EnquiryForm />} />
           <Route path="/enquiries" element={<EnquiryListScreen />} />
           <Route path="/enquiry/:id" element={<EnquiryUpdateForm />} />
           <Route path="/daily-update" element={<DailyUpdateForm />} />
