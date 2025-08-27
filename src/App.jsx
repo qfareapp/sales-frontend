@@ -7,6 +7,7 @@ import DailyUpdateForm from './screens/DailyUpdateForm';
 import ProjectDetails from './screens/ProjectDetails';
 import ProjectDetailsScreen from './screens/ProjectDetailsScreen';
 import ProductionHomeScreen from './screens/ProductionHomeScreen';
+import ProductionDetailsScreen from './screens/ProductionDetailsScreen';
 import MonthlyPlanningForm from './screens/MonthlyPlanningForm';
 import ManageWagonTypesScreen from './screens/ManageWagonTypesScreen';
 import DailyProductionForm from './screens/DailyProductionForm';
@@ -125,6 +126,7 @@ function App() {
           <Route path="/project/:id" element={<ProjectDetails />} />
           <Route path="/delivery-details/:projectId" element={<ProjectDetailsScreen />} />
           <Route path="/production" element={<ProductionHomeScreen />} />
+          <Route path="/production/:projectId" element={<ProductionDetailsScreen />} />
           <Route path="/monthly-planning" element={<MonthlyPlanningForm />} />
           <Route path="/manage-wagon-types" element={<ManageWagonTypesScreen />} />
           <Route path="/daily-production" element={<DailyProductionForm />} />

@@ -55,21 +55,25 @@ useEffect(() => {
 
   // ✅ Calculate wagon sets based on BOM and live inventory
   useEffect(() => {
-    if (!parts || parts.length === 0 || !liveInventory) {
-      setWagonSetsAvailable(0);
-      return;
-    }
+  if (!parts || parts.length === 0 || !liveInventory) {
+    setWagonSetsAvailable(0);
+    return;
+  }
 
-    let sets = Infinity;
-    parts.forEach(part => {
-      const availableQty = liveInventory[part.name] || 0;
-      const requiredQty = part.total || 1;
-      const possibleSets = Math.floor(availableQty / requiredQty);
-      sets = Math.min(sets, possibleSets);
-    });
+  let sets = Infinity;
+  parts.forEach(part => {
+    const entry = liveInventory[part.name];
+    const availableQty =
+      entry && typeof entry === "object" ? entry.available : entry || 0;
 
-    setWagonSetsAvailable(isFinite(sets) ? sets : 0);
-  }, [parts, liveInventory]);
+    const requiredQty = part.total || 1;
+    const possibleSets = Math.floor(availableQty / requiredQty);
+    sets = Math.min(sets, possibleSets);
+  });
+
+  setWagonSetsAvailable(isFinite(sets) ? sets : 0);
+}, [parts, liveInventory]);
+
 
   const handleChange = (partName, value) => {
     setQuantities(prev => ({ ...prev, [partName]: parseInt(value) || 0 }));
@@ -139,31 +143,37 @@ useEffect(() => {
           </button>
 
           {/* ✅ Live Inventory Table + Wagon Sets */}
-          {inventoryProjectId && (
-            <div className="mt-4">
-              <h5 className="fw-bold mb-3">📦 Current Inventory for Project: {inventoryProjectId}</h5>
-              <table className="table table-bordered">
-                <thead className="table-light">
-                  <tr>
-                    <th>Part</th>
-                    <th>Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(liveInventory).map(([part, qty]) => (
-                    <tr key={part}>
-                      <td>{part}</td>
-                      <td>{qty}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+{inventoryProjectId && (
+  <div className="mt-4">
+    <h5 className="fw-bold mb-3">
+      📦 Current Inventory for Project: {inventoryProjectId}
+    </h5>
+    <table className="table table-bordered">
+      <thead className="table-light">
+        <tr>
+          <th>Part</th>
+          <th>Available</th>
+        </tr>
+      </thead>
+      <tbody>
+        {Object.entries(liveInventory).map(([part, info]) => {
+          const available = typeof info === "object" ? info.available : info;
+          return (
+            <tr key={part}>
+              <td>{part}</td>
+              <td>{available ?? 0}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
 
-              <div className="alert alert-info mt-3">
-                🚆 <strong>Wagon Sets Possible:</strong> {wagonSetsAvailable}
-              </div>
-            </div>
-          )}
+    <div className="alert alert-info mt-3">
+      🚆 <strong>Wagon Sets Possible:</strong> {wagonSetsAvailable}
+    </div>
+  </div>
+)}
+
         </>
       )}
     </div>

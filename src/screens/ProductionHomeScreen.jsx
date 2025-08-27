@@ -192,13 +192,21 @@ const ProductionHomeScreen = () => {
             ) : (
               mergedData.map((item, idx) => (
                 <tr key={`${item.projectId}-${item._id || idx}`}>
-                  <td>{item.projectId}</td>
+                 <td>
+  <button
+    className="btn btn-link p-0 text-decoration-underline"
+    onClick={() => navigate(`/production/${encodeURIComponent(item.projectId)}`)}
+    title="View production details"
+  >
+    {item.projectId}
+  </button>
+</td>
                   <td>{item.clientType}</td>
                   <td>{item.clientName}</td>
                   <td>{item.wagonType}</td>
                   <td>{item.monthTarget}</td>
                   <td>{item.dm}</td>
-                  <td>{item.readyForPullout}</td> {/* ✅ fixed */}
+                  <td>{item.readyForPullout}</td>
                   <td>{item.pulloutDone}</td>
                   <td>
                     <div className="d-flex flex-column gap-1">
@@ -231,14 +239,14 @@ const ProductionHomeScreen = () => {
       [item.projectId]: e.target.value,
     }))
   }
-  // ✅ Disable if no wagons ready
+  
   disabled={item.readyForPullout === 0}
 />
 
 <button
   className="btn btn-sm btn-primary"
   onClick={() => handlePulloutUpdate(item)}
-  // ✅ Disable if no wagons ready
+  
   disabled={item.readyForPullout === 0}
 >
   Update
