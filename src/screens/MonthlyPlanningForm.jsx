@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import api from '../api';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -11,15 +10,17 @@ const MonthlyPlanningForm = () => {
   const [projectDetails, setProjectDetails] = useState({});
   const [monthlyTarget, setMonthlyTarget] = useState('');
 
+  // 🔹 Fetch confirmed projects
   useEffect(() => {
-  api.get('/enquiries') // ✅ no localhost hardcode
-    .then(res => {
-      const confirmedProjects = res.data.filter(e => e.stage === 'Confirmed');
-      setProjects(confirmedProjects);
-    })
-    .catch(err => console.error('Error fetching projects:', err));
-}, []);
+    api.get('/enquiries')
+      .then(res => {
+        const confirmedProjects = res.data.filter(e => e.stage === 'Confirmed');
+        setProjects(confirmedProjects);
+      })
+      .catch(err => console.error('❌ Error fetching projects:', err));
+  }, []);
 
+  // 🔹 Auto-fill details when project changes
   useEffect(() => {
     if (selectedProjectId) {
       const details = projects.find(p => p.projectId === selectedProjectId);
@@ -27,12 +28,27 @@ const MonthlyPlanningForm = () => {
     }
   }, [selectedProjectId, projects]);
 
+  // 🔹 Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!month) {
+      alert('Please select a month');
+      return;
+    }
+
+    const year = month.getFullYear();
+    const monthNum = month.getMonth() + 1; // 1–12
+
     const payload = {
       projectId: selectedProjectId,
-      month: month?.toISOString().substring(0, 7), // format: YYYY-MM
-      monthlyTarget,
+      clientName: projectDetails.clientName,
+      clientType: projectDetails.clientType,
+      wagonType: projectDetails.wagonType,
+      month: `${year}-${String(monthNum).padStart(2, '0')}`, // "YYYY-MM"
+      year,
+      monthNum,
+      monthlyTarget: Number(monthlyTarget),
     };
 
     try {
@@ -43,7 +59,7 @@ const MonthlyPlanningForm = () => {
       setMonthlyTarget('');
       setProjectDetails({});
     } catch (err) {
-      console.error('Submission error:', err);
+      console.error('❌ Submission error:', err);
       alert('❌ Failed to submit monthly plan.');
     }
   };
@@ -52,6 +68,8 @@ const MonthlyPlanningForm = () => {
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 20 }}>
       <h2>📅 Monthly Planning</h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        
+        {/* Project Selector */}
         <div>
           <label><strong>Project ID:</strong></label><br />
           <select
@@ -69,6 +87,7 @@ const MonthlyPlanningForm = () => {
           </select>
         </div>
 
+        {/* Month Picker */}
         <div>
           <label><strong>Month:</strong></label><br />
           <DatePicker
@@ -78,12 +97,12 @@ const MonthlyPlanningForm = () => {
             showMonthYearPicker
             required
             placeholderText="Select Month"
-            style={{ width: '100%' }}
           />
         </div>
 
+        {/* Project Details */}
         {selectedProjectId && (
-          <div style={{ background: '#f1f1f1', padding: 15, borderRadius: 8 }}>
+          <div style={{ background: '#f9f9f9', padding: 15, borderRadius: 8 }}>
             <p><strong>Client:</strong> {projectDetails.clientName}</p>
             <p><strong>Start Date:</strong> {projectDetails.deliveryStart ? new Date(projectDetails.deliveryStart).toLocaleDateString() : 'N/A'}</p>
             <p><strong>End Date:</strong> {projectDetails.deliveryEnd ? new Date(projectDetails.deliveryEnd).toLocaleDateString() : 'N/A'}</p>
@@ -92,6 +111,7 @@ const MonthlyPlanningForm = () => {
           </div>
         )}
 
+        {/* Target Input */}
         <div>
           <label><strong>Monthly Target (No. of Wagons):</strong></label><br />
           <input

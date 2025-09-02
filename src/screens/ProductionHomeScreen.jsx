@@ -11,6 +11,8 @@ const ProductionHomeScreen = () => {
   const [inventoryProjectId, setInventoryProjectId] = useState('');
   const [liveInventory, setLiveInventory] = useState({});
   const [pulloutInputs, setPulloutInputs] = useState({});
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // ✅ default current month
+const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const navigate = useNavigate();
 
   // Fetch confirmed orders + planning
@@ -43,47 +45,96 @@ const ProductionHomeScreen = () => {
   }, []);
 
   // Merge confirmed orders with planning
-  useEffect(() => {
-    if (!orders.length) return;
+  // Merge confirmed orders with planning
+// Merge confirmed orders with planning
+useEffect(() => {
+  if (!orders.length) return;
 
-    const normalize = (s) => (s || '').trim().toLowerCase();
+  const normalize = (s) => (s || '').trim().toLowerCase();
 
-    const merged = orders.map((order) => {
-      const matchedPlan = planning.find(
-        (plan) => normalize(plan.projectId) === normalize(order.projectId)
-      );
+  const merged = orders.map((order) => {
+    // all planning rows for this project
+    const projectPlans = planning.filter(
+      (plan) => normalize(plan.projectId) === normalize(order.projectId)
+    );
 
-      const monthTargetNum = Number(matchedPlan?.monthlyTarget) || 0;
+    // ✅ Derive month for each planning row (prefer backend field, else planDate, else createdAt)
+    const withMonth = projectPlans.map((p) => ({
+  ...p,
+  month: p.monthNum,  // direct from backend
+  year: p.year        // direct from backend
+}));
 
-      const totalPDI = Number(matchedPlan?.pdi) || 0;
-      const pulloutDone = Number(matchedPlan?.pulloutDone) || 0;
-      const readyForPullout = Number(matchedPlan?.readyForPullout) || 0;
+    // Assume selectedYear is tracked alongside selectedMonth
+const monthTargetNum = withMonth
+  .filter((p) => p.month === selectedMonth && p.year === selectedYear)
+  .reduce((sum, p) => sum + Number(p.monthlyTarget || 0), 0);
 
-      const pct =
-        monthTargetNum > 0
-          ? Math.min(100, Math.round(((pulloutDone + readyForPullout) / monthTargetNum) * 100))
-          : 0;
+const pulloutDone = withMonth
+  .filter((p) => p.month === selectedMonth && p.year === selectedYear)
+  .reduce((sum, p) => sum + Number(p.pulloutDone || 0), 0);
 
-      return {
-        _id: matchedPlan?._id || order._id,
-        projectId: order.projectId || 'N/A',
-        clientType: order.clientType || 'N/A',
-        clientName: order.clientName || 'N/A',
-        wagonType: order.wagonType || 'N/A',
-        monthTarget: monthTargetNum || '—',
-        dm: '',
-        totalPDI,
-        readyForPullout,   // ✅ use backend value
-        pulloutDone,
-        progressPct: pct,
-        progressText: monthTargetNum
-          ? `${pulloutDone + readyForPullout}/${monthTargetNum} (${pct}%)`
-          : `${pulloutDone + readyForPullout} (no target)`,
-      };
-    });
+const readyForPullout = withMonth
+  .filter((p) => p.month === selectedMonth && p.year === selectedYear)
+  .reduce((sum, p) => sum + Number(p.readyForPullout || 0), 0);
 
-    setMergedData(merged);
-  }, [orders, planning]);
+// backlog = all months strictly before (year, month)
+const prevTargets = withMonth
+  .filter((p) => p.year < selectedYear || (p.year === selectedYear && p.month < selectedMonth))
+  .reduce((sum, p) => sum + Number(p.monthlyTarget || 0), 0);
+
+const prevPullouts = withMonth
+  .filter((p) => p.year < selectedYear || (p.year === selectedYear && p.month < selectedMonth))
+  .reduce((sum, p) => sum + Number(p.pulloutDone || 0), 0);
+
+const backlog = prevTargets - prevPullouts;
+
+
+    // 🔹 Total available = backlog + current target
+    const totalAvailable = backlog + monthTargetNum;
+
+    // 🔹 Progress %
+    const pct =
+      totalAvailable > 0
+        ? Math.min(
+            100,
+            Math.round(((pulloutDone + readyForPullout) / totalAvailable) * 100)
+          )
+        : 0;
+
+    return {
+      _id: order._id,
+      projectId: order.projectId || 'N/A',
+      clientType: order.clientType || 'N/A',
+      clientName: order.clientName || 'N/A',
+      wagonType: order.wagonType || 'N/A',
+      backlog,
+      monthTarget: monthTargetNum || '—',
+      totalAvailable,
+      dm: '',
+      totalPDI: 0, // can be replaced if you track PDI separately
+      readyForPullout,
+      pulloutDone,
+      progressPct: pct,
+      progressText: totalAvailable
+        ? `${pulloutDone + readyForPullout}/${totalAvailable} (${pct}%)`
+        : `${pulloutDone + readyForPullout} (no target)`,
+      month: selectedMonth,
+year: selectedYear,
+startMonth: Math.min(...withMonth.map((p) => p.month || 12)) // earliest plan month
+    };
+  });
+
+  setMergedData(merged);
+}, [orders, planning, selectedMonth]);
+
+
+  // 🔄 Filter by selected month
+  const filteredData = mergedData.filter((item) => {
+  return item.year < selectedYear || 
+         (item.year === selectedYear && item.month === selectedMonth);
+});
+
 
   // 🔄 Fetch live inventory for selected project
   const fetchLiveInventory = async (projectId) => {
@@ -151,6 +202,25 @@ const ProductionHomeScreen = () => {
         </button>
       </div>
 
+      {/* Month Filter ✅ */}
+      <div className="mb-3">
+        <label className="form-label fw-semibold me-2">📅 Filter by Month:</label>
+
+        <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
+  {[...Array(12)].map((_, i) => (
+    <option key={i+1} value={i+1}>
+      {new Date(0, i).toLocaleString("default", { month: "long" })}
+    </option>
+  ))}
+</select>
+
+<select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+  {[2024, 2025, 2026].map((yr) => (
+    <option key={yr} value={yr}>{yr}</option>
+  ))}
+</select>
+      </div>
+
       {/* Inventory Entry Section */}
       {showInventoryForm && (
         <div className="border p-4 rounded bg-light">
@@ -176,7 +246,9 @@ const ProductionHomeScreen = () => {
               <th>Client Type</th>
               <th>Client Name</th>
               <th>Wagon Type</th>
+              <th>Backlog</th> 
               <th>Month Target</th>
+              <th>Total Available</th> 
               <th>DM</th>
               <th>PDI / Ready for Pullout</th>
               <th>Pullout Done</th>
@@ -185,38 +257,34 @@ const ProductionHomeScreen = () => {
             </tr>
           </thead>
           <tbody>
-            {mergedData.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr>
-                <td colSpan="10">No Confirmed Orders Found</td>
+                <td colSpan="10">No Confirmed Orders Found for this Month</td>
               </tr>
             ) : (
-              mergedData.map((item, idx) => (
+              filteredData.map((item, idx) => (
                 <tr key={`${item.projectId}-${item._id || idx}`}>
-                 <td>
-  <button
-    className="btn btn-link p-0 text-decoration-underline"
-    onClick={() => navigate(`/production/${encodeURIComponent(item.projectId)}`)}
-    title="View production details"
-  >
-    {item.projectId}
-  </button>
-</td>
+                  <td>
+                    <button
+                      className="btn btn-link p-0 text-decoration-underline"
+                      onClick={() => navigate(`/production/${encodeURIComponent(item.projectId)}`)}
+                      title="View production details"
+                    >
+                      {item.projectId}
+                    </button>
+                  </td>
                   <td>{item.clientType}</td>
                   <td>{item.clientName}</td>
                   <td>{item.wagonType}</td>
-                  <td>{item.monthTarget}</td>
+                  <td>{item.backlog}</td>
+                   <td>{item.monthTarget}</td>
+                  <td>{item.totalAvailable}</td>
                   <td>{item.dm}</td>
                   <td>{item.readyForPullout}</td>
                   <td>{item.pulloutDone}</td>
                   <td>
                     <div className="d-flex flex-column gap-1">
-                      <div
-                        className="progress"
-                        role="progressbar"
-                        aria-valuenow={item.progressPct}
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                      >
+                      <div className="progress">
                         <div
                           className="progress-bar"
                           style={{ width: `${item.progressPct}%` }}
@@ -229,28 +297,25 @@ const ProductionHomeScreen = () => {
                   <td>
                     <div className="d-flex gap-2 justify-content-center">
                       <input
-  type="number"
-  min="1"
-  style={{ width: "70px" }}
-  value={pulloutInputs[item.projectId] || ""}
-  onChange={(e) =>
-    setPulloutInputs((prev) => ({
-      ...prev,
-      [item.projectId]: e.target.value,
-    }))
-  }
-  
-  disabled={item.readyForPullout === 0}
-/>
-
-<button
-  className="btn btn-sm btn-primary"
-  onClick={() => handlePulloutUpdate(item)}
-  
-  disabled={item.readyForPullout === 0}
->
-  Update
-</button>
+                        type="number"
+                        min="1"
+                        style={{ width: "70px" }}
+                        value={pulloutInputs[item.projectId] || ""}
+                        onChange={(e) =>
+                          setPulloutInputs((prev) => ({
+                            ...prev,
+                            [item.projectId]: e.target.value,
+                          }))
+                        }
+                        disabled={item.readyForPullout === 0}
+                      />
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handlePulloutUpdate(item)}
+                        disabled={item.readyForPullout === 0}
+                      >
+                        Update
+                      </button>
                     </div>
                   </td>
                 </tr>

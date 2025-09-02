@@ -5,33 +5,36 @@ import api from '../api';
 const human0 = (n) => (Number.isFinite(+n) ? +n : 0);
 
 // ----- 5-day bucket helpers (use 1-5..26-30 like your sheet) -----
-const BUCKET_RANGES = ["1-5", "6-10", "11-15", "16-20", "21-25", "26-30"];
+// ----- 5-day bucket helpers (auto adjust for 30/31) -----
+function getBucketRanges(year, month) {  // 🔽 CHANGE HERE
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const ranges = ["1-5", "6-10", "11-15", "16-20", "21-25"];
+  ranges.push(daysInMonth === 31 ? "26-31" : "26-30");
+  return ranges;
+}
 
-function bucketLabelForDate(d) {
+function bucketLabelForDate(d, ranges) { // 🔽 CHANGE HERE
   const day = d.getDate();
   if (day <= 5) return "1-5";
   if (day <= 10) return "6-10";
   if (day <= 15) return "11-15";
   if (day <= 20) return "16-20";
   if (day <= 25) return "21-25";
-  return "26-30";
+  return ranges[ranges.length - 1]; // last bucket
 }
+
 
 // Build matrices from daily logs for CURRENT month:
 // partsMatrix:  { [partName]:  { "1-5": n, "6-10": n, ... } }
 // stagesMatrix: { [stageName]: { "1-5": n, "6-10": n, ... } }
-function buildFiveDayMatrices(daily = []) {
-  const now = new Date();
-  const m = now.getMonth();
-  const y = now.getFullYear();
-
+function buildFiveDayMatrices(daily = [], BUCKET_RANGES, selectedMonth, selectedYear) {
   const partsMatrix = {};
   const stagesMatrix = {};
 
   for (const row of daily) {
     const d = new Date(row.date || row.createdAt || row.ts);
-    if (d.getMonth() !== m || d.getFullYear() !== y) continue;
-    const bucket = bucketLabelForDate(d);
+    if (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear) continue;
+    const bucket = bucketLabelForDate(d, BUCKET_RANGES);
 
     const pp = row.partsProduced || {};
     Object.entries(pp).forEach(([part, qty]) => {
@@ -49,6 +52,34 @@ function buildFiveDayMatrices(daily = []) {
   }
 
   return { partsMatrix, stagesMatrix };
+}
+
+function buildDailyMatrices(daily = [], selectedMonth, selectedYear) {
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const dayLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
+
+  const partsMatrix = {};
+  const stagesMatrix = {};
+
+  for (const row of daily) {
+    const d = new Date(row.date || row.createdAt || row.ts);
+    if (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear) continue;
+    const label = `${d.getDate()}`;
+
+    const pp = row.partsProduced || {};
+    Object.entries(pp).forEach(([part, qty]) => {
+      if (!partsMatrix[part]) partsMatrix[part] = Object.fromEntries(dayLabels.map(l => [l, 0]));
+      partsMatrix[part][label] += human0(qty);
+    });
+
+    const sc = row.stagesCompleted || {};
+    Object.entries(sc).forEach(([stage, qty]) => {
+      if (!stagesMatrix[stage]) stagesMatrix[stage] = Object.fromEntries(dayLabels.map(l => [l, 0]));
+      stagesMatrix[stage][label] += human0(qty);
+    });
+  }
+
+  return { partsMatrix, stagesMatrix, dayLabels };
 }
 
 const ProgressBar = ({ value }) => {
@@ -74,13 +105,42 @@ export default function ProductionDetailsScreen() {
   const [stages, setStages] = useState([]);         // per-stage completion (overall)
   const [daily, setDaily] = useState([]);           // raw daily logs for the month
 
+
+
   // Derived summary
+  const today = new Date();
+const [selectedMonth, setSelectedMonth] = useState(today.getMonth()); // 0 = Jan
+const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+  const [showOverall, setShowOverall] = useState(false);
+  const [trendMode, setTrendMode] = useState("bucket"); // can be "bucket" or "daily"
   const monthTarget = human0(planning?.monthlyTarget);
   const pulloutDone = human0(planning?.pulloutDone);
   const readyForPullout = human0(planning?.readyForPullout);
   const totalCompleted = pulloutDone + readyForPullout;
   const left = monthTarget > 0 ? Math.max(0, monthTarget - totalCompleted) : 0;
   const pct = monthTarget > 0 ? (100 * totalCompleted) / monthTarget : 0;
+
+  // 🔽 NEW: calculate bucket ranges dynamically for current month
+const monthName = new Date(selectedYear, selectedMonth).toLocaleString("default", {
+  month: "long",
+  year: "numeric",
+});
+
+const BUCKET_RANGES = useMemo(
+  () => getBucketRanges(selectedYear, selectedMonth),
+  [selectedYear, selectedMonth]
+);
+
+
+// 🔽 NEW: choose which matrix to build depending on trend mode
+const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
+  if (trendMode === "bucket") {
+    const ranges = getBucketRanges(selectedYear, selectedMonth);
+    return { ...buildFiveDayMatrices(daily, ranges, selectedMonth, selectedYear), dayLabels: ranges };
+  } else {
+    return buildDailyMatrices(daily, selectedMonth, selectedYear);
+  }
+}, [daily, trendMode, selectedMonth, selectedYear]);
 
   // Your canonical row orders (match the sheet)
   const PART_ROWS = [
@@ -92,12 +152,6 @@ export default function ProductionDetailsScreen() {
     "Air Brake Testing", "APD", "PDI"
   ];
 
-  // Build matrices from fetched daily logs
-  const { partsMatrix, stagesMatrix } = useMemo(
-    () => buildFiveDayMatrices(daily),
-    [daily]
-  );
-
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -105,13 +159,16 @@ export default function ProductionDetailsScreen() {
         setLoading(true);
         setError('');
 
-        const [ordersRes, planRes, invRes, stagesRes, dailyRes] = await Promise.all([
-          api.get('/enquiries/orders'),
-          api.get('/production/monthly-planning'),
-          api.get(`/inventory/available/${encodeURIComponent(projectId)}`),
-          api.get(`/production/stages/${encodeURIComponent(projectId)}`).catch(() => ({ data: [] })),
-          api.get(`/production/daily?projectId=${encodeURIComponent(projectId)}`).catch(() => ({ data: [] })),
-        ]);
+        const [ordersRes, overallRes, planRes, invRes, stagesRes, dailyRes] = await Promise.all([
+  api.get('/enquiries/orders'),
+  api.get(`/production/projects/${encodeURIComponent(projectId)}/overall`),
+  api.get(`/production/monthly-planning?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`),
+  api.get(`/inventory/available/${encodeURIComponent(projectId)}`),
+  api.get(`/production/stages/${encodeURIComponent(projectId)}?month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
+  api.get(`/production/daily?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
+]);
+
+
 
         const ordersArray = Array.isArray(ordersRes.data?.orders) ? ordersRes.data.orders : [];
         const proj =
@@ -128,12 +185,18 @@ export default function ProductionDetailsScreen() {
           null;
 
         if (mounted) {
-          setProject(proj);
-          setPlanning(plan);
-          setInventory(invRes.data || {});
-          setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
-          setDaily(Array.isArray(dailyRes.data) ? dailyRes.data : []);
-        }
+  setProject({
+    ...proj,
+    overallCompleted: human0(overallRes?.data?.overallCompleted),
+    overallPulloutDone: human0(overallRes?.data?.overallPulloutDone),
+    totalOrdered: human0(overallRes?.data?.totalOrdered),
+  });
+  setPlanning(plan);
+  setInventory(invRes.data || {});
+  setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
+  setDaily(Array.isArray(dailyRes.data) ? dailyRes.data : []);
+}
+
       } catch (e) {
         if (mounted) setError(e?.response?.data?.message || e.message || 'Failed to load');
       } finally {
@@ -144,14 +207,28 @@ export default function ProductionDetailsScreen() {
     return () => {
       mounted = false;
     };
-  }, [projectId]);
+  }, [projectId, selectedMonth, selectedYear]);
 
   return (
     <div className="container mt-5 pt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h3 className="fw-bold m-0">Production Details — {projectId}</h3>
-        <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>← Back</button>
-      </div>
+  <h3 className="fw-bold m-0">
+    Production Details — {projectId}{" "}
+    {!showOverall && (
+      <span className="text-muted small">({monthName})</span>
+    )}
+  </h3>
+  <div>
+    <button
+      className="btn btn-sm btn-outline-primary me-2"
+      onClick={() => setShowOverall(!showOverall)}
+    >
+      {showOverall ? "Show Monthly Target" : "Show Overall Progress"}
+    </button>
+    <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>← Back</button>
+  </div>
+</div>
+
 
       {loading && <div className="alert alert-info">Loading…</div>}
       {error && <div className="alert alert-danger">{error}</div>}
@@ -160,56 +237,126 @@ export default function ProductionDetailsScreen() {
         <>
           {/* ===== Summary ===== */}
           <div className="row g-3 mb-4">
-            <div className="col-md-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="text-muted small">Client</div>
-                  <div className="fw-semibold">
-                    {(project?.clientName || '—')} <span className="text-muted">({project?.clientType || '—'})</span>
-                  </div>
-                  <div className="text-muted small mt-2">Wagon Type</div>
-                  <div className="fw-semibold">{project?.wagonType || '—'}</div>
-                </div>
-              </div>
+  {!showOverall ? (
+    <>
+      {/* ===== Monthly Target View ===== */}
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Client</div>
+            <div className="fw-semibold">
+              {(project?.clientName || '—')} <span className="text-muted">({project?.clientType || '—'})</span>
             </div>
+            <div className="text-muted small mt-2">Wagon Type</div>
+            <div className="fw-semibold">{project?.wagonType || '—'}</div>
+          </div>
+        </div>
+      </div>
 
-            <div className="col-md-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="text-muted small">Monthly Target</div>
-                  <div className="display-6">{monthTarget || '—'}</div>
-                  <div className="mt-2"><ProgressBar value={pct} /></div>
-                  <div className="small text-muted mt-1">
-                    {monthTarget ? `${totalCompleted}/${monthTarget} (${Math.round(pct)}%)` : `${totalCompleted} (no target)`}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="text-muted small">Completed</div>
-                  <div className="display-6">{totalCompleted}</div>
-                  <div className="text-muted small mt-2">Pullout Done</div>
-                  <div className="fw-semibold">{pulloutDone}</div>
-                  <div className="text-muted small mt-1">Ready for Pullout</div>
-                  <div className="fw-semibold">{readyForPullout}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-3">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="text-muted small">Left (vs Target)</div>
-                  <div className="display-6">{left}</div>
-                  <div className="text-muted small mt-2">Project ID</div>
-                  <div className="fw-semibold">{projectId}</div>
-                </div>
-              </div>
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Monthly Target ({monthName})</div>
+            <div className="display-6">{monthTarget || '—'}</div>
+            <div className="mt-2"><ProgressBar value={pct} /></div>
+            <div className="small text-muted mt-1">
+              {monthTarget ? `${totalCompleted}/${monthTarget} (${Math.round(pct)}%)` : `${totalCompleted} (no target)`}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Completed</div>
+            <div className="display-6">{totalCompleted}</div>
+            <div className="text-muted small mt-2">Pullout Done</div>
+            <div className="fw-semibold">{pulloutDone}</div>
+            <div className="text-muted small mt-1">Ready for Pullout</div>
+            <div className="fw-semibold">{readyForPullout}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Left (vs Target)</div>
+            <div className="display-6">{left}</div>
+            <div className="text-muted small mt-2">Project ID</div>
+            <div className="fw-semibold">{projectId}</div>
+          </div>
+        </div>
+      </div>
+    </>
+  ) : (
+    <>
+      {/* ===== Overall Project View ===== */}
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Client</div>
+            <div className="fw-semibold">
+              {(project?.clientName || '—')} <span className="text-muted">({project?.clientType || '—'})</span>
+            </div>
+            <div className="text-muted small mt-2">Wagon Type</div>
+            <div className="fw-semibold">{project?.wagonType || '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Overall Completed</div>
+            <div className="display-6">{human0(project?.overallCompleted)}</div>
+            <div className="mt-2">
+              <ProgressBar
+                value={
+                  project?.totalOrdered > 0
+                    ? (100 * human0(project?.overallCompleted)) / human0(project?.totalOrdered)
+                    : 0
+                }
+              />
+            </div>
+            <div className="small text-muted mt-1">
+              {project?.totalOrdered
+                ? `${human0(project?.overallCompleted)}/${human0(project?.totalOrdered)} (${Math.round(
+                    (100 * human0(project?.overallCompleted)) / human0(project?.totalOrdered)
+                  )}%)`
+                : `${human0(project?.overallCompleted)} (no total)` }
+            </div>
+            <div className="text-muted small mt-2">Pullout Done</div>
+            <div className="fw-semibold">{human0(project?.overallPulloutDone)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Remaining</div>
+            <div className="display-6">
+              {Math.max(0, human0(project?.totalOrdered) - human0(project?.overallCompleted))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="col-md-3">
+        <div className="card h-100">
+          <div className="card-body">
+            <div className="text-muted small">Project ID</div>
+            <div className="fw-semibold">{projectId}</div>
+          </div>
+        </div>
+      </div>
+    </>
+  )}
+</div>
+
+
 
           {/* ===== Inventory ===== */}
           <h5 className="fw-semibold border-bottom pb-2 mb-3">📦 Live Inventory</h5>
@@ -279,53 +426,104 @@ export default function ProductionDetailsScreen() {
             </table>
           </div>
 
-          {/* ===== 5-day trend pulled from daily logs ===== */}
-          <h5 className="fw-semibold border-bottom pb-2 mb-3">🗓️ 5-Day Trend (This Month)</h5>
-          <div className="table-responsive mb-4">
-            <table className="table table-bordered table-hover align-middle text-center">
-              <thead className="table-dark">
-                <tr>
-                  <th>Date</th>
-                  {BUCKET_RANGES.map(range => (
-                    <th key={range}>{range}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {/* Parts */}
-                <tr className="table-secondary">
-                  <td colSpan={1 + BUCKET_RANGES.length} className="fw-bold text-start">Part</td>
-                </tr>
-                {PART_ROWS.map(name => {
-                  const row = partsMatrix[name] || Object.fromEntries(BUCKET_RANGES.map(r => [r, 0]));
-                  return (
-                    <tr key={name}>
-                      <td className="text-start">{name}</td>
-                      {BUCKET_RANGES.map(range => (
-                        <td key={range}>{row[range]}</td>
-                      ))}
-                    </tr>
-                  );
-                })}
+         
+          {/* ===== Trend (5-day / Daily) ===== */}
 
-                {/* Stages */}
-                <tr className="table-secondary">
-                  <td colSpan={1 + BUCKET_RANGES.length} className="fw-bold text-start">Stages</td>
-                </tr>
-                {STAGE_ROWS.map(name => {
-                  const row = stagesMatrix[name] || Object.fromEntries(BUCKET_RANGES.map(r => [r, 0]));
-                  return (
-                    <tr key={name}>
-                      <td className="text-start">{name}</td>
-                      {BUCKET_RANGES.map(range => (
-                        <td key={range}>{row[range]}</td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+<div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+  <h5 className="fw-semibold m-0">
+    🗓️ Production Trend {!showOverall && `(${monthName})`}
+  </h5>
+  <div className="d-flex">
+    <select
+      className="form-select form-select-sm me-2"
+      value={selectedMonth}
+      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+    >
+      {Array.from({ length: 12 }, (_, i) => (
+        <option key={i} value={i}>
+          {new Date(2000, i).toLocaleString("default", { month: "long" })}
+        </option>
+      ))}
+    </select>
+    <select
+      className="form-select form-select-sm"
+      value={selectedYear}
+      onChange={(e) => setSelectedYear(Number(e.target.value))}
+    >
+      {Array.from({ length: 5 }, (_, i) => {
+        const year = today.getFullYear() - 2 + i; // last 2, current, next 2
+        return (
+          <option key={year} value={year}>
+            {year}
+          </option>
+        );
+      })}
+    </select>
+  </div>
+</div>
+
+<div className="mb-2">
+  <div className="btn-group">
+    <button
+      className={`btn btn-sm ${trendMode === "bucket" ? "btn-primary" : "btn-outline-primary"}`}
+      onClick={() => setTrendMode("bucket")}
+    >
+      5-Day Buckets
+    </button>
+    <button
+      className={`btn btn-sm ${trendMode === "daily" ? "btn-primary" : "btn-outline-primary"}`}
+      onClick={() => setTrendMode("daily")}
+    >
+      Daily
+    </button>
+  </div>
+</div>
+
+<div className="table-responsive mb-4">
+  <table className="table table-bordered table-hover align-middle text-center">
+    <thead className="table-dark">
+      <tr>
+        <th>Date</th>
+        {dayLabels.map(range => (
+          <th key={range}>{range}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {/* Parts */}
+      <tr className="table-secondary">
+        <td colSpan={1 + dayLabels.length} className="fw-bold text-start">Part</td>
+      </tr>
+      {PART_ROWS.map(name => {
+        const row = partsMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
+        return (
+          <tr key={name}>
+            <td className="text-start">{name}</td>
+            {dayLabels.map(range => (
+              <td key={range}>{row[range]}</td>
+            ))}
+          </tr>
+        );
+      })}
+
+      {/* Stages */}
+      <tr className="table-secondary">
+        <td colSpan={1 + dayLabels.length} className="fw-bold text-start">Stages</td>
+      </tr>
+      {STAGE_ROWS.map(name => {
+        const row = stagesMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
+        return (
+          <tr key={name}>
+            <td className="text-start">{name}</td>
+            {dayLabels.map(range => (
+              <td key={range}>{row[range]}</td>
+            ))}
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
         </>
       )}
     </div>
