@@ -144,7 +144,7 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
 
   // Your canonical row orders (match the sheet)
   const PART_ROWS = [
-    "Underframe", "Body Side", "Body End", "Door", "Bogie", "Coupler", "Wheel"
+    "Underframe", "Body Side", "Body End", "Roof", "Wheel set", "Bogie", "CRF Set", "Coupler (Including DG 71)", "Barrel", "Brake System (ABE, SAB, ABP)", "Huck Bolt (Lock Bolt)", "Steel Set", "Door" 
   ];
   const STAGE_ROWS = [
     "Boxing", "BMP", "Wheeling & Visual Clearence",
