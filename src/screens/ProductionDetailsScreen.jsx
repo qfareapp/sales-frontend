@@ -2,6 +2,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 
+// 👉 Milestone label helper
+const titleize = (key = '') =>
+  key.replace(/_/g, ' ')
+     .replace(/\s+/g, ' ')
+     .trim()
+     .replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.slice(1));
+
+// 👉 Check completion
+const isComplete = (m) => !!m?.date;
+
+// (OPTIONAL) define a preferred order; unknown keys are appended after
+const MILESTONE_ORDER = [
+  'advance_received',
+  'design_loan_charge_payment',
+  'main_file_opening',
+  'qap_wps_release',
+  'component_ir_file',
+  'bom_upload_release',
+  'po_released_non_dm',
+];
+
 const human0 = (n) => (Number.isFinite(+n) ? +n : 0);
 
 // ----- 5-day bucket helpers (use 1-5..26-30 like your sheet) -----
@@ -104,6 +125,7 @@ export default function ProductionDetailsScreen() {
   const [inventory, setInventory] = useState(null); // current live inventory
   const [stages, setStages] = useState([]);         // per-stage completion (overall)
   const [daily, setDaily] = useState([]);           // raw daily logs for the month
+  const [milestones, setMilestones] = useState({});
 
 
 
@@ -142,6 +164,34 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
   }
 }, [daily, trendMode, selectedMonth, selectedYear]);
 
+const milestoneList = useMemo(() => {
+  const obj = milestones || {};
+  const keys = Object.keys(obj);
+
+  // Stable order: known ones first, then the rest alphabetically
+  const known = MILESTONE_ORDER.filter(k => keys.includes(k));
+  const unknown = keys.filter(k => !MILESTONE_ORDER.includes(k)).sort();
+
+  const ordered = [...known, ...unknown];
+
+  return ordered.map(k => {
+    const m = obj[k] || {};
+    // The API already returns ISO yyyy-mm-dd for date fields in project-summary;
+    // but if not, normalize here:
+    const ymd = m?.date ? String(m.date).slice(0, 10) : '';
+    return {
+      key: k,
+      label: titleize(k),
+      date: ymd,
+      notes: m?.notes || '',
+      fileUrl: m?.fileUrl || null,
+      fileName: m?.fileName || null,
+      done: !!ymd,
+    };
+  });
+}, [milestones]);
+
+
   // Your canonical row orders (match the sheet)
   const PART_ROWS = [
     "Underframe", "Body Side", "Body End", "Roof", "Wheel set", "Bogie", "CRF Set", "Coupler (Including DG 71)", "Barrel", "Brake System (ABE, SAB, ABP)", "Huck Bolt (Lock Bolt)", "Steel Set", "Door" 
@@ -159,7 +209,8 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
         setLoading(true);
         setError('');
 
-        const [ordersRes, overallRes, planRes, invRes, stagesRes, dailyRes] = await Promise.all([
+        const [summaryRes, ordersRes, overallRes, planRes, invRes, stagesRes, dailyRes] = await Promise.all([
+  api.get(`/enquiries/project-summary/${encodeURIComponent(projectId)}`, { params: { ts: Date.now() } }),
   api.get('/enquiries/orders'),
   api.get(`/production/projects/${encodeURIComponent(projectId)}/overall`),
   api.get(`/production/monthly-planning?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`),
@@ -167,6 +218,7 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
   api.get(`/production/stages/${encodeURIComponent(projectId)}?month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
   api.get(`/production/daily?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
 ]);
+
 
 
 
@@ -185,6 +237,7 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
           null;
 
         if (mounted) {
+           setMilestones(summaryRes?.data?.milestones || {});
   setProject({
     ...proj,
     overallCompleted: human0(overallRes?.data?.overallCompleted),
@@ -210,8 +263,48 @@ const { partsMatrix, stagesMatrix, dayLabels } = useMemo(() => {
   }, [projectId, selectedMonth, selectedYear]);
 
   return (
-    <div className="container mt-5 pt-4">
+    
+    <div className="container mt-0 pt-4">
+      {/* ===== Milestone Status ===== */}
+<div className="card mb-3">
+  <div className="card-body">
+    <div className="d-flex justify-content-between align-items-center">
+      <h5 className="fw-semibold m-0">🧭 Milestone Status</h5>
+      <small className="text-muted">
+        Click a completed milestone to open its file (if attached)
+      </small>
+    </div>
+
+    {(!milestoneList || milestoneList.length === 0) ? (
+      <div className="mt-3 text-muted">No milestones defined for this project.</div>
+    ) : (
+      <div className="mt-3 d-flex flex-wrap gap-2">
+        {milestoneList.map(m => (
+          <button
+            key={m.key}
+            className={`btn btn-sm ${m.done ? 'btn-success' : 'btn-outline-secondary'}`}
+            style={{ borderRadius: '999px' }}
+            title={m.notes ? `Notes: ${m.notes}` : (m.date ? `Done on ${m.date}` : 'Pending')}
+            onClick={() => {
+              if (m.done && m.fileUrl) window.open(m.fileUrl, '_blank', 'noopener,noreferrer');
+            }}
+          >
+            <span className="me-2">{m.label}</span>
+            {m.done ? (
+              <span className="badge bg-light text-success border">{m.date}</span>
+            ) : (
+              <span className="badge bg-light text-muted border">Pending</span>
+            )}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
+
       <div className="d-flex justify-content-between align-items-center mb-3">
+
+      
   <h3 className="fw-bold m-0">
     Production Details — {projectId}{" "}
     {!showOverall && (
