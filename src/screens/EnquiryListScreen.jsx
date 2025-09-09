@@ -244,9 +244,9 @@ const EnquiryListScreen = () => {
         </button>
       </div>
 
-      <Link to="/sales-kpi">
+     {/*<Link to="/sales-kpi">
         <button style={{ margin: 10, padding: 10 }}>View Sales KPIs</button>
-      </Link>
+      </Link>*/}
 
       <h2>All Enquiries</h2>
 

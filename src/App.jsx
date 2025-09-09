@@ -63,9 +63,10 @@ const LayoutWrapper = ({ children }) => {
       {/* Sidebar */}
       <div className={`sidebar bg-dark text-white ${sidebarOpen ? 'open' : ''}`}>
         <ul className="nav flex-column mt-3">
-          <li className="nav-item">
+        {/* <li className="nav-item">
             <Link to="/" className="nav-link text-white" onClick={handleLinkClick}>➕ Home</Link>
-          </li>
+          </li>*/}
+          <li><Link to="/" className="nav-link text-white" onClick={handleLinkClick}>📋Home</Link></li>
 
           {/* Sales Menu */}
           <li className="nav-item">
@@ -79,9 +80,9 @@ const LayoutWrapper = ({ children }) => {
             {salesOpen && (
               <ul className="nav flex-column ms-3">
                 <li><Link to="/enquiry-form" className="nav-link text-white" onClick={handleLinkClick}>➕ New Enquiry</Link></li>
-                <li><Link to="/enquiries" className="nav-link text-white" onClick={handleLinkClick}>📋 View Enquiries</Link></li>
+                
                 <li><Link to="/daily-update" className="nav-link text-white" onClick={handleLinkClick}>🛠️ Daily Update</Link></li>
-                <li><Link to="/sales-kpi" className="nav-link text-white" onClick={handleLinkClick}>📈 Sales KPI</Link></li>
+                {/* <li><Link to="/sales-kpi" className="nav-link text-white" onClick={handleLinkClick}>📈 Sales KPI</Link></li> */}
               </ul>
             )}
           </li>
@@ -120,7 +121,7 @@ function App() {
       <LayoutWrapper>
         <Routes>
           <Route path="/enquiry-form" element={<EnquiryForm />} />
-          <Route path="/enquiries" element={<EnquiryListScreen />} />
+          <Route path="/" element={<EnquiryListScreen />} />
           <Route path="/enquiry/:id" element={<EnquiryUpdateForm />} />
           <Route path="/daily-update" element={<DailyUpdateForm />} />
           <Route path="/project/:id" element={<ProjectDetails />} />
@@ -130,8 +131,8 @@ function App() {
           <Route path="/monthly-planning" element={<MonthlyPlanningForm />} />
           <Route path="/manage-wagon-types" element={<ManageWagonTypesScreen />} />
           <Route path="/daily-production" element={<DailyProductionForm />} />
-          <Route path="/sales-kpi" element={<SalesKPIScreen />} />
-           <Route path="/" element={<DashboardHome />} />
+          {/*<Route path="/sales-kpi" element={<SalesKPIScreen />} />
+           <Route path="/" element={<DashboardHome />} />*/}
         </Routes>
       </LayoutWrapper>
     </Router>
