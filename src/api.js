@@ -1,8 +1,10 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  // Automatically append `/api` to your backend base URL
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`
+  baseURL:
+    import.meta.env.MODE === "production"
+      ? "https://sales-backend-covv.onrender.com"
+      : "http://localhost:5000/api",
 });
 
 export default api;
