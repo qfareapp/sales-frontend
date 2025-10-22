@@ -41,17 +41,6 @@ body {
   margin: 0;
 }
 
-.sidebar {
-  position: fixed;
-  top: 56px; /* height of navbar */
-  left: 0;
-  width: 200px;
-  height: 100%;
-  padding-top: 1rem;
-  background-color: #343a40;
-  z-index: 999;
-}
-
 .main-content {
   margin-top: 56px; /* navbar height */
   margin-left: 200px; /* sidebar width */
@@ -59,13 +48,29 @@ body {
 }
 .sidebar {
   position: fixed;
-  top: 56px; /* height of navbar */
-  bottom: 0;
+  top: 56px; /* match navbar height */
   left: 0;
   width: 250px;
-  overflow-y: auto;
+  height: calc(100vh - 56px); /* full viewport minus navbar */
+  background-color: #343a40;
+  overflow-y: auto; /* ✅ enables internal scroll */
+  overflow-x: hidden;
   padding-top: 20px;
+  z-index: 999;
 }
+
+/* Optional – scrollbar styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
 
 .main-content {
   margin-left: 250px;
