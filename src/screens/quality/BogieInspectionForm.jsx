@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import api from "../../api";
+import '../../App.css';
 import {
   Box,
   Button,
@@ -286,47 +287,78 @@ if (springPhoto) formData.append("springPhoto", springPhoto);
               value={wagonType}
               onChange={(e) => setWagonType(e.target.value)}
               fullWidth
-            >
+              sx={{
+    minWidth: 160, // ✅ ensures label text fits
+    "& .MuiInputLabel-root": {
+      whiteSpace: "nowrap", // ✅ prevents breaking or ellipsis
+      overflow: "visible",
+    },
+  }}
+>
               <MenuItem value="BOXN">BOXN</MenuItem>
               <MenuItem value="BCNHL">BCNHL</MenuItem>
               <MenuItem value="BOBRN">BOBRN</MenuItem>
               <MenuItem value="BLC">BLC</MenuItem>
             </TextField>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Bogie No."
-              value={bogieNo}
-              onChange={(e) => setBogieNo(e.target.value)}
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              select
-              label="Bogie Make"
-              value={bogieMake}
-              onChange={(e) => setBogieMake(e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="CASNUB">CASNUB</MenuItem>
-              <MenuItem value="ICF">ICF</MenuItem>
-              <MenuItem value="LHB">LHB</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              select
-              label="Bogie Type"
-              value={bogieType}
-              onChange={(e) => setBogieType(e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="22.9T">22.9T</MenuItem>
-              <MenuItem value="25T">25T</MenuItem>
-              <MenuItem value="30T">30T</MenuItem>
-            </TextField>
-          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+  <TextField
+    label="Bogie No."
+    value={bogieNo}
+    onChange={(e) => setBogieNo(e.target.value)}
+    fullWidth
+    sx={{
+      minWidth: 180,
+      "& .MuiInputLabel-root": {
+        whiteSpace: "nowrap",
+        overflow: "visible",
+        textOverflow: "unset",
+      },
+    }}
+  />
+</Grid>
+          <Grid item xs={12} sm={6} md={4}>
+  <TextField
+    select
+    label="Bogie Make"
+    value={bogieMake}
+    onChange={(e) => setBogieMake(e.target.value)}
+    fullWidth
+    sx={{
+      minWidth: 180,
+      "& .MuiInputLabel-root": {
+        whiteSpace: "nowrap",
+        overflow: "visible",
+        textOverflow: "unset",
+      },
+    }}
+  >
+    <MenuItem value="CASNUB">CASNUB</MenuItem>
+    <MenuItem value="ICF">ICF</MenuItem>
+    <MenuItem value="LHB">LHB</MenuItem>
+  </TextField>
+</Grid>
+          <Grid item xs={12} sm={6} md={4}>
+  <TextField
+    select
+    label="Bogie Type"
+    value={bogieType}
+    onChange={(e) => setBogieType(e.target.value)}
+    fullWidth
+    sx={{
+      minWidth: 180,
+      "& .MuiInputLabel-root": {
+        whiteSpace: "nowrap",
+        overflow: "visible",
+        textOverflow: "unset",
+      },
+    }}
+  >
+    <MenuItem value="22.9T">22.9T</MenuItem>
+    <MenuItem value="25T">25T</MenuItem>
+    <MenuItem value="30T">30T</MenuItem>
+  </TextField>
+</Grid>
         </Grid>
       </Paper>
 
@@ -402,19 +434,28 @@ if (springPhoto) formData.append("springPhoto", springPhoto);
         </Grid>
 
         <Grid container spacing={2} mt={1}>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              select
-              label="Brake Shoe Type"
-              fullWidth
-              value={brakeShoeType}
-              onChange={(e) => setBrakeShoeType(e.target.value)}
-            >
-              <MenuItem value="Cast Iron">Cast Iron</MenuItem>
-              <MenuItem value="Composite">Composite</MenuItem>
-            </TextField>
-          </Grid>
-        </Grid>
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      select
+      label="Brake Shoe Type"
+      fullWidth
+      value={brakeShoeType}
+      onChange={(e) => setBrakeShoeType(e.target.value)}
+      sx={{
+        minWidth: 200, // ensures label text fits fully
+        "& .MuiInputLabel-root": {
+          whiteSpace: "nowrap", // prevent label text from breaking or truncating
+          overflow: "visible",
+          textOverflow: "unset",
+        },
+      }}
+    >
+      <MenuItem value="Cast Iron">Cast Iron</MenuItem>
+      <MenuItem value="Composite">Composite</MenuItem>
+    </TextField>
+  </Grid>
+</Grid>
+
 
         <Grid container spacing={2} mt={1}>
           <CheckPhotoRow
@@ -434,30 +475,50 @@ if (springPhoto) formData.append("springPhoto", springPhoto);
         </Grid>
 
         <Grid container spacing={2} mt={1}>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              select
-              label="Type of Adopter"
-              fullWidth
-              value={adopterType}
-              onChange={(e) => setAdopterType(e.target.value)}
-            >
-              <MenuItem value="25T">25T</MenuItem>
-              <MenuItem value="30T">30T</MenuItem>
-              <MenuItem value="Other">Other</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Remarks"
-              multiline
-              rows={3}
-              fullWidth
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-            />
-          </Grid>
-        </Grid>
+  {/* ✅ Type of Adopter dropdown */}
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      select
+      label="Type of Adopter"
+      fullWidth
+      value={adopterType}
+      onChange={(e) => setAdopterType(e.target.value)}
+      sx={{
+        minWidth: 200,
+        "& .MuiInputLabel-root": {
+          whiteSpace: "nowrap",
+          overflow: "visible",
+          textOverflow: "unset",
+        },
+      }}
+    >
+      <MenuItem value="25T">25T</MenuItem>
+      <MenuItem value="30T">30T</MenuItem>
+      <MenuItem value="Other">Other</MenuItem>
+    </TextField>
+  </Grid>
+
+  {/* ✅ Remarks text area */}
+  <Grid item xs={12} sm={12} md={8}>
+    <TextField
+      label="Remarks"
+      multiline
+      rows={3}
+      fullWidth
+      value={remarks}
+      onChange={(e) => setRemarks(e.target.value)}
+      sx={{
+        "& .MuiInputLabel-root": {
+          whiteSpace: "nowrap",
+          overflow: "visible",
+        },
+        "& .MuiInputBase-inputMultiline": {
+          fontSize: { xs: "0.9rem", sm: "1rem" },
+        },
+      }}
+    />
+  </Grid>
+</Grid>
 
         <Button
           variant="contained"
