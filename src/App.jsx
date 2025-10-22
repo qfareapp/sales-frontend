@@ -11,9 +11,9 @@ import ProductionDetailsScreen from './screens/ProductionDetailsScreen';
 import MonthlyPlanningForm from './screens/MonthlyPlanningForm';
 import ManageWagonTypesScreen from './screens/ManageWagonTypesScreen';
 import DailyProductionForm from './screens/DailyProductionForm';
-import PlanningDashboard from './screens/PlanningDashboard';
-import PlanningForm from './components/PlanningForm';
-import ProjectGantt from './components/ProjectGantt';
+//import PlanningDashboard from './screens/PlanningDashboard';
+//import PlanningForm from './components/PlanningForm';
+//import ProjectGantt from './components/ProjectGantt';
 import BogieInspectionForm from './screens/quality/BogieInspectionForm';
 import QualityDashboard from './screens/quality/QualityDashboard';
 import BogieInspectionReport from './screens/quality/BogieInspectionReport';
@@ -76,11 +76,11 @@ const LayoutWrapper = ({ children }) => {
       </Link>
     </li>
 
-    <li>
+    {/*<li>
       <Link to="/planning" className="nav-link text-white" onClick={handleLinkClick}>
         📝 Project Planning
       </Link>
-    </li>
+    </li>*/}
 
     {/* Sales Menu */}
     <li className="nav-item">
@@ -138,7 +138,7 @@ const LayoutWrapper = ({ children }) => {
               ⚙️ Manage Wagon Types
             </Link>
           </li>
-          <li>
+          {/*<li>
             <Link to="/planning" className="nav-link text-white" onClick={handleLinkClick}>
               📝 Setup Planning
             </Link>
@@ -147,7 +147,7 @@ const LayoutWrapper = ({ children }) => {
             <Link to="/gantt" className="nav-link text-white" onClick={handleLinkClick}>
               📊 Gantt View
             </Link>
-          </li>
+          </li>*/}
         </ul>
       )}
     </li>
@@ -220,11 +220,11 @@ function App() {
           <Route path="/monthly-planning" element={<MonthlyPlanningForm />} />
           <Route path="/manage-wagon-types" element={<ManageWagonTypesScreen />} />
           <Route path="/daily-production" element={<DailyProductionForm />} />
-          <Route path="/planning/:projectId" element={<PlanningForm />} />
+          {/*<Route path="/planning/:projectId" element={<PlanningForm />} />*/}
           <Route path="/quality-dashboard" element={<QualityDashboard />} />
 <Route path="/bogie-inspection-form" element={<BogieInspectionForm />} />
 <Route path="/bogie-inspection-report" element={<BogieInspectionReport />} />
-<Route path="/gantt/:projectId" element={<ProjectGantt />} />
+{/*<Route path="/gantt/:projectId" element={<ProjectGantt />} />
 <Route path="/planning" element={<PlanningDashboard />} />
 <Route path="/gantt" element={<PlanningDashboard defaultTab="gantt" />} />
 
