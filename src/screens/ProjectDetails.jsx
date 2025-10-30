@@ -53,9 +53,9 @@ const ProjectDetails = () => {
     ];
 
     try {
-      const res = await api.post(`/enquiries/${id}`, {
-        comments: updatedComments
-      });
+      const res = await api.patch(`/enquiries/${id}`, {
+  comments: updatedComments
+});
 
       setEnquiry(prev => ({
         ...prev,
