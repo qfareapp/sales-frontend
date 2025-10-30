@@ -19,6 +19,8 @@ import QualityDashboard from './screens/quality/QualityDashboard';
 import BogieInspectionReport from './screens/quality/BogieInspectionReport';
 import SalesKPIScreen from './screens/SalesKPIScreen';
 import DashboardHome from './screens/DashboardHome'; // adjust path as needed
+import SalesProdEntryForm from "./screens/sales/SalesProdEntryForm";
+import SalesProdDashboard from "./screens/sales/SalesProdDashboard";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -103,6 +105,25 @@ const LayoutWrapper = ({ children }) => {
               🛠️ Daily Update
             </Link>
           </li>
+           {/* 🔹 New Fortnightly Module Links */}
+      <li>
+        <Link
+          to="/sales/production-entry"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          🗂️ Production Data Entry
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/sales/production-dashboard"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          📈 Production Dashboard
+        </Link>
+      </li>
         </ul>
       )}
     </li>
@@ -224,6 +245,8 @@ function App() {
           <Route path="/quality-dashboard" element={<QualityDashboard />} />
 <Route path="/bogie-inspection-form" element={<BogieInspectionForm />} />
 <Route path="/bogie-inspection-report" element={<BogieInspectionReport />} />
+<Route path="/sales/production-entry" element={<SalesProdEntryForm />} />
+<Route path="/sales/production-dashboard" element={<SalesProdDashboard />} />
 {/*<Route path="/gantt/:projectId" element={<ProjectGantt />} />
 <Route path="/planning" element={<PlanningDashboard />} />
 <Route path="/gantt" element={<PlanningDashboard defaultTab="gantt" />} />
