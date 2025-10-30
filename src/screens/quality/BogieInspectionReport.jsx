@@ -15,38 +15,40 @@ import {
   TableBody,
   Dialog,
   DialogContent,
-  Link,
+  DialogTitle,
+  DialogActions,
   Grid,
   TextField,
   Button,
+  Chip,
   Divider,
 } from "@mui/material";
 
+/* -----------------------------------------------------------
+   ✅ Bogie Inspection Report Dashboard
+----------------------------------------------------------- */
 export default function BogieInspectionReport() {
   const [data, setData] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [detailItem, setDetailItem] = useState(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
-  // 🔗 PDF capture root
   const pdfRef = useRef(null);
 
   useEffect(() => {
-    fetchData(); // initial load
+    fetchData();
   }, []);
 
   /* -----------------------------------------------------------
-     ✅ Fetch Data (with optional filter)
+     ✅ Fetch Data
   ----------------------------------------------------------- */
   const fetchData = async (filter = false) => {
     try {
       let url = "/bogie-inspections";
-      if (filter && fromDate && toDate) {
-        url += `?from=${fromDate}&to=${toDate}`;
-      }
+      if (filter && fromDate && toDate) url += `?from=${fromDate}&to=${toDate}`;
       const res = await api.get(url);
       const sorted = (res.data.data || []).sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt) // latest first
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
       setData(sorted);
     } catch (err) {
@@ -66,7 +68,9 @@ export default function BogieInspectionReport() {
   const formatDateTime = (ts) => {
     if (!ts) return "-";
     const d = new Date(ts);
-    return `${d.toLocaleDateString("en-GB")} | ${d.toLocaleTimeString("en-GB")}`;
+    return `${d.toLocaleDateString("en-GB")} | ${d
+      .toLocaleTimeString("en-GB")
+      .replace(/:\d+ /, " ")}`;
   };
 
   const getImageUrl = (filename) =>
@@ -82,7 +86,28 @@ export default function BogieInspectionReport() {
     return "Pending";
   };
 
-  // 🖼️ Photo cell (thumbnail + click to enlarge)
+  const renderCheckChip = (obj) => {
+    if (!obj) return <Chip label="Pending" color="warning" size="small" />;
+    const val = obj.check;
+    if (val === 1) return <Chip label="OK" color="success" size="small" />;
+    if (val === -1) return <Chip label="NOT OK" color="error" size="small" />;
+    return <Chip label="Pending" color="warning" size="small" />;
+  };
+
+  const renderVisualList = (visual = {}) => {
+    if (!visual) return "-";
+    const selected = Object.keys(visual).filter((k) => visual[k]);
+    if (!selected.length) return "-";
+    return selected.map((v) => (
+      <Chip
+        key={v}
+        label={v.toUpperCase()}
+        size="small"
+        sx={{ mr: 0.5, mb: 0.5, background: "#ffe6e6" }}
+      />
+    ));
+  };
+
   const PhotoThumb = ({ file }) => {
     const src = getImageUrl(file);
     if (!src) return <em>-</em>;
@@ -105,12 +130,11 @@ export default function BogieInspectionReport() {
     );
   };
 
-  // ✅ Excel export (unchanged)
+  /* -----------------------------------------------------------
+     ✅ Excel Export
+  ----------------------------------------------------------- */
   const handleExportExcel = () => {
-    if (!data.length) {
-      alert("No data to export!");
-      return;
-    }
+    if (!data.length) return alert("No data to export!");
     const excelData = data.map((row, i) => ({
       SL: i + 1,
       "Date & Time": formatDateTime(row.createdAt),
@@ -136,27 +160,34 @@ export default function BogieInspectionReport() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Bogie Inspections");
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const filename = `Bogie_Inspection_Report_${new Date()
-      .toISOString()
-      .slice(0, 10)}.xlsx`;
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), filename);
+    saveAs(
+      new Blob([buf], { type: "application/octet-stream" }),
+      `Bogie_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
   };
 
   /* -----------------------------------------------------------
-     ✅ PDF export (A4 Landscape, exact styles + images)
+     ✅ PDF Export
   ----------------------------------------------------------- */
-  const handleExportPDF = async () => {
+  /* -----------------------------------------------------------
+   ✅ PDF Export (Fit all columns & rows on single A4 landscape)
+----------------------------------------------------------- */
+const handleExportPDF = async () => {
   const root = pdfRef.current;
   if (!root) return;
 
+  // Temporarily style for capture
   root.classList.add("pdf-capture");
 
-  // ✅ Force full width for capture
+  // Save original width
   const originalWidth = root.style.width;
-  root.style.width = "2100px"; // ensures full-width canvas for landscape PDF
 
+  // Expand width for full table rendering
+  root.style.width = "2100px"; // make canvas wide enough for all columns
+
+  // Capture with high resolution
   const canvas = await html2canvas(root, {
-    scale: 2,
+    scale: 2,              // ensures crisp text
     useCORS: true,
     allowTaint: true,
     backgroundColor: "#ffffff",
@@ -167,38 +198,46 @@ export default function BogieInspectionReport() {
   });
 
   const imgData = canvas.toDataURL("image/png");
+
+  // Create landscape PDF
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "mm",
     format: "a4",
   });
 
+  // Fit the full image into one page width
   const pdfWidth = pdf.internal.pageSize.getWidth();   // 297 mm
   const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
 
-  // Fit image perfectly within page without cropping
+  // Calculate image aspect ratio to scale properly
   const imgWidth = pdfWidth;
   const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
+  // Scale to fit height if taller
   const scale = imgHeight > pdfHeight ? pdfHeight / imgHeight : 1;
   const finalWidth = imgWidth * scale;
   const finalHeight = imgHeight * scale;
 
-  // ✅ Remove empty side margins
+  // Center vertically
   const xOffset = 0;
   const yOffset = (pdfHeight - finalHeight) / 2;
 
+  // Add image to PDF
   pdf.addImage(imgData, "PNG", xOffset, yOffset, finalWidth, finalHeight);
 
-  root.classList.remove("pdf-capture");
+  // Reset styles
   root.style.width = originalWidth;
+  root.classList.remove("pdf-capture");
 
+  // Save file
   pdf.save(
     `Bogie_Inspection_Report_Agarpara_${new Date()
       .toISOString()
       .slice(0, 10)}.pdf`
   );
 };
+
 
   /* -----------------------------------------------------------
      ✅ Render
@@ -233,168 +272,101 @@ export default function BogieInspectionReport() {
               Filter
             </Button>
             <Button variant="outlined" color="secondary" onClick={handleClear} sx={{ flex: 1 }}>
-              Clear Filter
+              Clear
             </Button>
             <Button variant="contained" color="success" onClick={handleExportExcel} sx={{ flex: 1 }}>
-              Export to Excel
+              Excel
             </Button>
             <Button variant="contained" color="warning" onClick={handleExportPDF} sx={{ flex: 1 }}>
-              Export to PDF (A4 - Landscape)
+              PDF
             </Button>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* ====== PDF CAPTURE AREA (exact styling) ====== */}
-      <Box ref={pdfRef} id="pdf-root">
-        {/* Top banner with logo + title (keep colors) */}
-        <Paper sx={{ p: 2, borderRadius: 0, boxShadow: "none", mb: 0 }}>
-          <Grid container alignItems="center">
-            <Grid item xs={6}>
-              {/* (Optional) Logo slot on the left — keep height consistent */}
-              <Box sx={{ height: 28, display: "flex", alignItems: "center" }}>
-                <Typography variant="h6" fontWeight={800}>
-                  SGS
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} textAlign="right">
-              <Typography variant="body2" fontWeight={600}>
-                Date: {new Date().toLocaleDateString("en-GB")}
-              </Typography>
-            </Grid>
-          </Grid>
-
-          <Box
-            sx={{
-              mt: 1.5,
-              background: "#e7ff80", // light green band like your template
-              border: "1px solid #c7e45e",
-              px: 2,
-              py: 1,
-              textAlign: "center",
-            }}
-          >
-            <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: 0.3 }}>
-              BOGIE INSPECTION REPORT
-            </Typography>
-            <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
-              Format No.: SGS/BOGIE/01 | Rev. 01 | Effective Date: 02-10-2025
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              background: "#e7ff80",
-              border: "1px solid #c7e45e",
-              borderTop: "none",
-              textAlign: "center",
-              py: 0.6,
-              mb: 1.5,
-            }}
-          >
-            <Typography variant="subtitle1" fontWeight={700}>
-              AGARPARA WORKS
-            </Typography>
-          </Box>
-        </Paper>
-
-        {/* Data Table */}
+      {/* ====== Dashboard Table (with Images) ====== */}
+      <Box ref={pdfRef}>
         <Paper sx={{ p: 0, overflow: "auto", borderRadius: 0 }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow sx={{ "& th": { background: "#f5f7ff", fontWeight: 700 } }}>
-                <TableCell>SL. NO.</TableCell>
-                <TableCell>DATE &amp; TIME</TableCell>
-                <TableCell>TYPE OF WAGON</TableCell>
-                <TableCell>BOGIE NO.</TableCell>
-                <TableCell>BOGIE MAKE</TableCell>
-                <TableCell>BOGIE TYPE</TableCell>
-
-                {/* Wheel base */}
-                <TableCell align="center">WHEEL BASE<br /><small>CHECK</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                {/* Diagonal */}
-                <TableCell align="center">BOGIE DIAGONAL<br /><small>CHECK</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                {/* Journal centre */}
-                <TableCell align="center">BOGIE JOURNAL CENTRE<br /><small>CHECK</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                {/* Side frame jaw */}
-                <TableCell align="center">SIDE FRAME JAW<br /><small>CHECK</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                {/* Brake beam pocket */}
-                <TableCell align="center">BRAKE BEAM POCKET<br /><small>LATERAL DISTANCE</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                {/* Side bearer centre */}
-                <TableCell align="center">SIDE BEARER CENTRE DISTANCE<br /><small>(1474 ± 5 MM)</small></TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                <TableCell align="center">PUSH ROD CHECK</TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-                <TableCell align="center">END PULL ROD CHECK</TableCell>
-                <TableCell align="center"><small>PHOTO</small></TableCell>
-
-                <TableCell align="center">BRAKE SHOE<br /><small>TYPE</small></TableCell>
-                <TableCell align="center">BRAKE SHOE CHECK</TableCell>
-                <TableCell align="center">SPRING VISUAL CHECK</TableCell>
-                <TableCell align="center">TYPE OF ADOPTER</TableCell>
-                <TableCell align="center">REMARKS</TableCell>
-                <TableCell align="center">INSPECTOR&apos;S SIGNATURE</TableCell>
+                <TableCell>SL</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Bogie No.</TableCell>
+                <TableCell>Make</TableCell>
+                <TableCell>Bogie Type</TableCell>
+                <TableCell align="center">Wheel Base</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Bogie Diagonal</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Journal Centre</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Side Frame Jaw</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Brake Beam Pocket</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Side Bearer Centre</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Push Rod</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">End Pull Rod</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Brake Shoe</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="center">Spring Visual</TableCell>
+                <TableCell align="center">Adopter</TableCell>
+                <TableCell align="center">Remarks</TableCell>
               </TableRow>
             </TableHead>
 
             <TableBody>
               {data.map((row, idx) => (
                 <TableRow key={row._id}>
-                  <TableCell>{String(idx + 1).padStart(2, "0")}.</TableCell>
+                  <TableCell>{idx + 1}</TableCell>
                   <TableCell>{formatDateTime(row.createdAt)}</TableCell>
                   <TableCell>{row.wagonType}</TableCell>
-                  <TableCell>{row.bogieNo}</TableCell>
+
+                  {/* 🔗 Clickable Bogie No */}
+                  <TableCell>
+                    <Button
+                      variant="text"
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        color: "#1a73e8",
+                      }}
+                      onClick={() => setDetailItem(row)}
+                    >
+                      {row.bogieNo}
+                    </Button>
+                  </TableCell>
+
                   <TableCell>{row.bogieMake}</TableCell>
                   <TableCell>{row.bogieType}</TableCell>
 
-                  {/* Wheel base */}
+                  {/* With images */}
                   <TableCell align="center">{renderCheck(row.wheelBase)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.wheelBase?.photo} /></TableCell>
-
-                  {/* Diagonal */}
                   <TableCell align="center">{renderCheck(row.bogieDiagonal)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.bogieDiagonal?.photo} /></TableCell>
-
-                  {/* Journal centre */}
                   <TableCell align="center">{renderCheck(row.bogieJournalCentre)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.bogieJournalCentre?.photo} /></TableCell>
-
-                  {/* Side frame jaw */}
                   <TableCell align="center">{renderCheck(row.sideFrameJaw)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.sideFrameJaw?.photo} /></TableCell>
-
-                  {/* Brake beam pocket */}
-                  <TableCell align="center">{row.brakeBeamPocket?.value || "-"}</TableCell>
+                  <TableCell align="center">{row.brakeBeamPocket?.value}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.brakeBeamPocket?.photo} /></TableCell>
-
-                  {/* Side bearer centre */}
-                  <TableCell align="center">{row.sideBearerCentre?.value || "-"}</TableCell>
+                  <TableCell align="center">{row.sideBearerCentre?.value}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.sideBearerCentre?.photo} /></TableCell>
-
-                  {/* Push rod / End pull rod */}
                   <TableCell align="center">{renderCheck(row.pushRodCheck)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.pushRodCheck?.photo} /></TableCell>
                   <TableCell align="center">{renderCheck(row.endPullRodCheck)}</TableCell>
                   <TableCell align="center"><PhotoThumb file={row.endPullRodCheck?.photo} /></TableCell>
-
-                  <TableCell align="center">{row.brakeShoeType || "-"}</TableCell>
                   <TableCell align="center">{renderCheck(row.brakeShoeCheck)}</TableCell>
+                  <TableCell align="center"><PhotoThumb file={row.brakeShoeCheck?.photo} /></TableCell>
                   <TableCell align="center">{renderCheck(row.springVisualCheck)}</TableCell>
-                  <TableCell align="center">{row.adopterType || "-"}</TableCell>
-                  <TableCell align="center">{row.remarks || "-"}</TableCell>
-                  <TableCell align="center"></TableCell>
+                  <TableCell align="center">{row.adopterType}</TableCell>
+                  <TableCell align="center">{row.remarks}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -402,39 +374,93 @@ export default function BogieInspectionReport() {
         </Paper>
       </Box>
 
+      {/* 🟢 Detail Modal */}
+      <Dialog open={!!detailItem} onClose={() => setDetailItem(null)} fullWidth maxWidth="md">
+        {detailItem && (
+          <>
+            <DialogTitle>
+              <Typography fontWeight={700}>
+                Bogie Inspection — {detailItem.bogieNo}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Date: {formatDateTime(detailItem.createdAt)}
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Typography fontWeight={700} sx={{ mb: 1 }}>
+                Inspection Parameters
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ background: "#f3f4f6" }}>
+                    <TableCell>Parameter</TableCell>
+                    <TableCell align="center">Status</TableCell>
+                    <TableCell align="center">Image</TableCell>
+                    <TableCell align="center">Visual Conditions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[
+                    ["Wheel Base", detailItem.wheelBase],
+                    ["Bogie Diagonal", detailItem.bogieDiagonal],
+                    ["Journal Centre", detailItem.bogieJournalCentre],
+                    ["Side Frame Jaw", detailItem.sideFrameJaw],
+                    ["Brake Beam Pocket", detailItem.brakeBeamPocket],
+                    ["Side Bearer Centre", detailItem.sideBearerCentre],
+                    ["Push Rod", detailItem.pushRodCheck],
+                    ["End Pull Rod", detailItem.endPullRodCheck],
+                    ["Brake Shoe", detailItem.brakeShoeCheck],
+                    ["Spring Visual", detailItem.springVisualCheck],
+                  ].map(([label, obj]) => (
+                    <TableRow key={label}>
+                      <TableCell>{label}</TableCell>
+                      <TableCell align="center">{renderCheckChip(obj)}</TableCell>
+                      <TableCell align="center"><PhotoThumb file={obj?.photo} /></TableCell>
+                      <TableCell align="center">{renderVisualList(obj?.visual)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography fontWeight={700}>Adopter Type</Typography>
+                  <Typography>{detailItem.adopterType || "-"}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography fontWeight={700}>Inspector Signature</Typography>
+                  <PhotoThumb file={detailItem.inspectorSignature} />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography fontWeight={700}>Remarks</Typography>
+                  <Typography>{detailItem.remarks || "-"}</Typography>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDetailItem(null)}>Close</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
       {/* 🖼️ Image Viewer */}
       <Dialog open={!!selectedImage} onClose={() => setSelectedImage(null)} maxWidth="md">
-        <DialogContent sx={{ textAlign: "center", background: "#000" }}>
+        <DialogContent sx={{ background: "#000", textAlign: "center" }}>
           {selectedImage && (
-            <Box>
-              <img
-                src={selectedImage}
-                alt="Inspection"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  maxHeight: "80vh",
-                  borderRadius: 6,
-                }}
-              />
-            </Box>
+            <img
+              src={selectedImage}
+              alt="zoom"
+              style={{ width: "100%", height: "auto", borderRadius: 6 }}
+            />
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Print/PDF-only CSS */}
-      <style>{`
-        /* Hide the top control bar when capturing/printing */
-        .pdf-capture ~ .MuiPaper-root { display: none; }
-
-        /* Ensure table header sticks visually in capture */
-        #pdf-root th {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-      `}</style>
-      <style>{`
-  /* 🧭 Only during PDF capture */
+    </Box>
+  );
+}
+<style>{`
+  /* 🧾 PDF Capture - Fit Table to One Page */
   .pdf-capture table {
     border-collapse: collapse;
     width: 100% !important;
@@ -445,29 +471,25 @@ export default function BogieInspectionReport() {
   .pdf-capture td {
     text-align: center !important;
     vertical-align: middle !important;
-    font-size: 10px !important;
-    padding: 6px 2px !important;
+    font-size: 9.5px !important;
+    padding: 4px 2px !important;
     border: 0.3px solid #999;
     word-wrap: break-word;
   }
 
-  /* Merge image with text below */
   .pdf-capture td img {
-    display: block !important;
-    margin: 3px auto 0 !important;
-    width: 55px !important;
-    height: 40px !important;
+    width: 50px !important;
+    height: 35px !important;
     object-fit: cover !important;
     border-radius: 3px;
+    margin-top: 3px !important;
   }
 
-  /* Larger row height for visibility */
   .pdf-capture tr {
-    height: 100px !important;
+    height: auto !important;
     page-break-inside: avoid !important;
   }
 
-  /* Landscape full width */
   @media print {
     @page {
       size: A4 landscape;
@@ -475,12 +497,7 @@ export default function BogieInspectionReport() {
     }
   }
 
-  /* Ensure white background */
   .pdf-capture {
-    background: #ffffff !important;
+    background: #fff !important;
   }
 `}</style>
-
-    </Box>
-  );
-}

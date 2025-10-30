@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import api from "../../api";
-import '../../App.css';
+import "../../App.css";
 import {
   Box,
   Button,
@@ -10,27 +10,40 @@ import {
   TextField,
   MenuItem,
   Slider,
+  Switch,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Divider,
+  Chip,
+  Stack,
 } from "@mui/material";
 
-
 /* ----------------------------------------------------------------
-   Helper Components
+   Helpers
 ---------------------------------------------------------------- */
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-/* ✅ Tri-State Slider Component */
-const TriStateSlider = ({ value, onChange }) => {
+const within = (val, nominal, tol) => {
+  if (val === "" || val === null || isNaN(Number(val))) return null;
+  const n = Number(val);
+  return n >= nominal - tol && n <= nominal + tol;
+};
+
+const triFromBool = (b) => (b === null ? 0 : b ? 1 : -1);
+
+/* ----------------------------------------------------------------
+   ✅ Tri-State Slider
+---------------------------------------------------------------- */
+const TriStateSlider = ({ value, onChange, disabled = false }) => {
   const marks = [
     { value: -1, label: "❌" },
     { value: 0, label: "—" },
     { value: 1, label: "✅" },
   ];
 
-  const getColor = (val) => {
-    if (val === 1) return "success.main";
-    if (val === -1) return "error.main";
-    return "grey.500";
-  };
+  const getColor = (val) =>
+    val === 1 ? "success.main" : val === -1 ? "error.main" : "grey.500";
 
   return (
     <Box sx={{ width: 180, mx: "auto", textAlign: "center" }}>
@@ -41,20 +54,23 @@ const TriStateSlider = ({ value, onChange }) => {
         min={-1}
         max={1}
         marks={marks}
+        disabled={disabled}
         sx={{
           color: getColor(value),
-          "& .MuiSlider-thumb": {
-            bgcolor: getColor(value),
-          },
+          "& .MuiSlider-thumb": { bgcolor: getColor(value) },
           "& .MuiSlider-markLabel": {
             fontWeight: 600,
-            color: "#555",
+            color: "#444",
           },
         }}
       />
       <Typography
         variant="body2"
-        sx={{ mt: 0.5, fontWeight: 600, color: getColor(value) }}
+        sx={{
+          mt: 0.5,
+          fontWeight: 600,
+          color: getColor(value),
+        }}
       >
         {value === 1 ? "OK" : value === -1 ? "NOT OK" : "Pending"}
       </Typography>
@@ -62,104 +78,253 @@ const TriStateSlider = ({ value, onChange }) => {
   );
 };
 
-/* ✅ Check + Photo Row Component */
-const CheckPhotoRow = ({ label, value, onChange, photo, onPhotoChange }) => {
-  const bgColor =
-    value === 1 ? "#e9f7ef" : value === -1 ? "#fdecea" : "#f9fafb";
+/* ----------------------------------------------------------------
+   ✅ Visual Condition Checkbox Group
+---------------------------------------------------------------- */
+const VisualConditionGroup = ({ state, setState }) => {
+  const options = ["Crack", "Scratch", "Dents", "Bend", "Damaged"];
+  const handleChange = (opt) => (e) => {
+    setState((prev) => ({ ...prev, [opt.toLowerCase()]: e.target.checked }));
+  };
 
   return (
-    <Grid item xs={12} md={6}>
-      <Paper sx={{ p: 2, background: bgColor, borderRadius: 2 }}>
-        <Typography fontWeight={600} mb={1}>
-          {label}
-        </Typography>
-
-        {/* ✅ Tri-State Slider */}
-        <TriStateSlider value={value} onChange={onChange} />
-
-        <Button variant="outlined" component="label" fullWidth sx={{ mt: 2 }}>
-          {photo ? "Replace Photo" : "Upload Photo"}
-          <input
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => onPhotoChange(e.target.files[0])}
-          />
-        </Button>
-
-        {photo && (
-          <Box sx={{ mt: 1 }}>
-            <img
-              src={URL.createObjectURL(photo)}
-              alt="preview"
-              style={{
-                width: "100%",
-                maxHeight: 180,
-                objectFit: "cover",
-                borderRadius: 6,
-              }}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        flexWrap: "wrap",
+        gap: 2,
+        mt: 1.5,
+      }}
+    >
+      {options.map((opt) => (
+        <FormControlLabel
+          key={opt}
+          control={
+            <Checkbox
+              checked={state[opt.toLowerCase()] || false}
+              onChange={handleChange(opt)}
+              sx={{ "& .MuiSvgIcon-root": { fontSize: 20 } }}
             />
-          </Box>
-        )}
+          }
+          label={opt}
+          sx={{
+            "& .MuiFormControlLabel-label": {
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#333",
+            },
+          }}
+        />
+      ))}
+    </Box>
+  );
+};
+
+/* ----------------------------------------------------------------
+   ✅ Measurement Row (with integrated photo + visual)
+---------------------------------------------------------------- */
+const MeasurementRow = ({
+  label,
+  unit = "mm",
+  refText,
+  nominal,
+  tolerance,
+  measured,
+  setMeasured,
+  checkVal,
+  setCheckVal,
+  photo,
+  setPhoto,
+  auto,
+  setAuto,
+  visualState,
+  setVisualState,
+}) => {
+  const autoCheck = useMemo(
+    () => within(measured, nominal, tolerance),
+    [measured, nominal, tolerance]
+  );
+
+  useEffect(() => {
+    if (auto) setCheckVal(triFromBool(autoCheck));
+  }, [autoCheck, auto]);
+
+  const bgColor =
+    checkVal === 1 ? "#e8f5e9" : checkVal === -1 ? "#ffebee" : "#f9fafb";
+
+  return (
+    <Grid item xs={12}>
+      <Paper
+        sx={{
+          p: 3,
+          background: bgColor,
+          borderRadius: 3,
+          boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <Typography fontWeight={700} sx={{ fontSize: "1rem" }}>
+              {label}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Reference: <b>{refText}</b>
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label={`Measured Value (${unit})`}
+              type="number"
+              fullWidth
+              value={measured}
+              onChange={(e) => setMeasured(e.target.value)}
+              size="small"
+            />
+            <Typography variant="caption" color="text.secondary">
+              {autoCheck === null
+                ? "Enter a value"
+                : autoCheck
+                ? "Within tolerance"
+                : "Out of tolerance"}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControlLabel
+              control={<Switch checked={auto} onChange={(e) => setAuto(e.target.checked)} />}
+              label="Auto"
+            />
+            <Typography variant="caption" color="text.secondary">
+              {auto ? "Auto from measured value" : "Manual override enabled"}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <TriStateSlider value={checkVal} onChange={setCheckVal} disabled={auto} />
+          </Grid>
+
+          {/* Upload + Preview */}
+          <Grid item xs={12}>
+            <Button variant="outlined" component="label" fullWidth>
+              {photo ? "Replace Photo" : "Upload Photo"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+              />
+            </Button>
+            {photo && (
+              <Box sx={{ mt: 1 }}>
+                <img
+                  src={URL.createObjectURL(photo)}
+                  alt="preview"
+                  style={{
+                    width: "100%",
+                    maxHeight: 220,
+                    objectFit: "cover",
+                    borderRadius: 8,
+                    border: "1px solid #ddd",
+                  }}
+                />
+              </Box>
+            )}
+          </Grid>
+
+          {/* Visual Checkboxes inside the same card */}
+          {visualState && setVisualState && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1.5 }} />
+              <VisualConditionGroup
+                state={visualState}
+                setState={setVisualState}
+              />
+            </Grid>
+          )}
+        </Grid>
       </Paper>
     </Grid>
   );
 };
 
-/* ✅ Numeric + Photo Row Component */
-const NumberPhotoRow = ({
+/* ----------------------------------------------------------------
+   ✅ CheckPhotoRow (Go/No-Go + Slider + Photo + Visual)
+---------------------------------------------------------------- */
+const CheckPhotoRow = ({
   label,
-  value,
-  setValue,
-  note,
+  checkVal,
+  setCheckVal,
   photo,
-  onPhotoChange,
-  unit = "mm",
-}) => (
-  <Grid item xs={12} md={6}>
-    <Paper sx={{ p: 2, background: "#f9fafb", borderRadius: 2 }}>
-      <Typography fontWeight={600}>{label}</Typography>
-      <TextField
-        variant="outlined"
-        size="small"
-        fullWidth
-        type="number"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={`Enter ${unit}`}
-        sx={{ mt: 1 }}
-      />
-      {note && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {note}
-        </Typography>
-      )}
-      <Button variant="outlined" component="label" fullWidth sx={{ mt: 1 }}>
-        {photo ? "Replace Photo" : "Upload Photo"}
-        <input
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => onPhotoChange(e.target.files[0])}
-        />
-      </Button>
-      {photo && (
-        <Box sx={{ mt: 1 }}>
-          <img
-            src={URL.createObjectURL(photo)}
-            alt="preview"
-            style={{
-              width: "100%",
-              maxHeight: 180,
-              objectFit: "cover",
-              borderRadius: 6,
-            }}
-          />
-        </Box>
-      )}
-    </Paper>
-  </Grid>
-);
+  setPhoto,
+  visualState,
+  setVisualState,
+}) => {
+  const bgColor =
+    checkVal === 1 ? "#e8f5e9" : checkVal === -1 ? "#ffebee" : "#f9fafb";
+
+  return (
+    <Grid item xs={12}>
+      <Paper
+        sx={{
+          p: 3,
+          background: bgColor,
+          borderRadius: 3,
+          boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <Typography fontWeight={700}>{label}</Typography>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TriStateSlider value={checkVal} onChange={setCheckVal} />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Button variant="outlined" component="label" fullWidth>
+              {photo ? "Replace Photo" : "Upload Photo"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+              />
+            </Button>
+          </Grid>
+
+          {photo && (
+            <Grid item xs={12}>
+              <img
+                src={URL.createObjectURL(photo)}
+                alt="preview"
+                style={{
+                  width: "100%",
+                  maxHeight: 220,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  border: "1px solid #ddd",
+                }}
+              />
+            </Grid>
+          )}
+
+          {visualState && setVisualState && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1.5 }} />
+              <VisualConditionGroup
+                state={visualState}
+                setState={setVisualState}
+              />
+            </Grid>
+          )}
+        </Grid>
+      </Paper>
+    </Grid>
+  );
+};
 
 /* ----------------------------------------------------------------
    Main Component
@@ -171,108 +336,177 @@ export default function BogieInspectionForm() {
   const [bogieMake, setBogieMake] = useState("");
   const [bogieType, setBogieType] = useState("");
 
-  // ✅ Tri-state fields: -1 = Not OK, 0 = Pending, 1 = OK
-  const [wheelBase, setWheelBase] = useState(0);
-  const [wheelBasePhoto, setWheelBasePhoto] = useState(null);
-  const [bogieDiagonal, setBogieDiagonal] = useState(0);
-  const [diagPhoto, setDiagPhoto] = useState(null);
-  const [journalCentre, setJournalCentre] = useState(0);
-  const [journalPhoto, setJournalPhoto] = useState(null);
-  const [sideFrameJaw, setSideFrameJaw] = useState(0);
-  const [sideFrameJawPhoto, setSideFrameJawPhoto] = useState(null);
-  // ✅ New photo states for the missing sections
-const [pushRodPhoto, setPushRodPhoto] = useState(null);
-const [endPullRodPhoto, setEndPullRodPhoto] = useState(null);
-const [brakeShoePhoto, setBrakeShoePhoto] = useState(null);
-const [springPhoto, setSpringPhoto] = useState(null);
+  /* =======================
+     Numeric checks (+ auto)
+     ======================= */
+  // Wheel Base 2000 ± 5
+  const [wbMeasured, setWbMeasured] = useState("");
+  const [wbCheck, setWbCheck] = useState(0);
+  const [wbPhoto, setWbPhoto] = useState(null);
+  const [wbAuto, setWbAuto] = useState(true);
+  const [wbVisual, setWbVisual] = useState({});
 
+  // Bogie Diagonal 3018 ± 4.5
+  const [bdMeasured, setBdMeasured] = useState("");
+  const [bdCheck, setBdCheck] = useState(0);
+  const [bdPhoto, setBdPhoto] = useState(null);
+  const [bdAuto, setBdAuto] = useState(true);
+  const [bdVisual, setBdVisual] = useState({});
 
-  const [brakeBeamPocket, setBrakeBeamPocket] = useState("");
-  const [brakeBeamPhoto, setBrakeBeamPhoto] = useState(null);
-  const [sideBearer, setSideBearer] = useState("");
-  const [sideBearerPhoto, setSideBearerPhoto] = useState(null);
+  // Journal Centre 2260 ± 1.5
+  const [jcMeasured, setJcMeasured] = useState("");
+  const [jcCheck, setJcCheck] = useState(0);
+  const [jcPhoto, setJcPhoto] = useState(null);
+  const [jcAuto, setJcAuto] = useState(true);
+  const [jcVisual, setJcVisual] = useState({});
 
-  const [pushRod, setPushRod] = useState(0);
-  const [endPullRod, setEndPullRod] = useState(0);
+  // Brake Beam Pocket Lateral Distance & APD 2048 ± 1.5
+  const [bbMeasured, setBbMeasured] = useState("");
+  const [bbCheck, setBbCheck] = useState(0);
+  const [bbPhoto, setBbPhoto] = useState(null);
+  const [bbAuto, setBbAuto] = useState(true);
+  const [bbVisual, setBbVisual] = useState({});
+
+  // Side Bearer Centre Distance – ref can be 1474 ±5 (default) or 1750 ±5
+  const [sbRef, setSbRef] = useState({ nominal: 1474, tol: 5, text: "1474 ± 5 mm" });
+  const [sbMeasured, setSbMeasured] = useState("");
+  const [sbCheck, setSbCheck] = useState(0);
+  const [sbPhoto, setSbPhoto] = useState(null);
+  const [sbAuto, setSbAuto] = useState(true);
+  const [sbVisual, setSbVisual] = useState({});
+
+  /* =======================
+     Go/No-Go / Visual checks
+     ======================= */
+  const [sfjCheck, setSfjCheck] = useState(0);
+  const [sfjPhoto, setSfjPhoto] = useState(null);
+  const [sfjVisual, setSfjVisual] = useState({});
+
+  const [pushRodCheck, setPushRodCheck] = useState(0);
+  const [pushRodPhoto, setPushRodPhoto] = useState(null);
+  const [pushRodVisual, setPushRodVisual] = useState({});
+
+  const [endPullRodCheck, setEndPullRodCheck] = useState(0);
+  const [endPullRodPhoto, setEndPullRodPhoto] = useState(null);
+  const [endPullRodVisual, setEndPullRodVisual] = useState({});
+
   const [brakeShoeType, setBrakeShoeType] = useState("");
-  const [brakeShoe, setBrakeShoe] = useState(0);
-  const [spring, setSpring] = useState(0);
+  const [brakeShoeCheck, setBrakeShoeCheck] = useState(0);
+  const [brakeShoePhoto, setBrakeShoePhoto] = useState(null);
+  const [brakeShoeVisual, setBrakeShoeVisual] = useState({});
+
+  /* =======================
+     Adopter, Remarks, Signature
+     ======================= */
   const [adopterType, setAdopterType] = useState("");
-  const [remarks, setRemarks] = useState("");
+  const [otherRemark, setOtherRemark] = useState("");
+  const [inspectorSignature, setInspectorSignature] = useState(null);
 
-  const sideBearerFlag = useMemo(() => {
-    const v = parseFloat(sideBearer);
-    if (isNaN(v)) return null;
-    return v >= 1469 && v <= 1479 ? "within" : "out";
-  }, [sideBearer]);
+  // predefined remarks list (checkboxes)
+  const remarkOptions = [
+    "Side frame bottom jaw not as per drawing",
+    "Pocket liner APD missing",
+    "Brake beam pocket distance not as per gauge",
+    "Bogie S/F punch missing one side",
+    "Bogie journal centre out, not match as per gauge",
+  ];
+  const [remarkChecks, setRemarkChecks] = useState(
+    remarkOptions.reduce((acc, r) => ({ ...acc, [r]: false }), {})
+  );
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const compiledRemarks = useMemo(() => {
+    const selected = remarkOptions
+      .filter((r) => remarkChecks[r])
+      .map((r, i) => `${i + 1}. ${r}`);
+    if (otherRemark?.trim()) selected.push(`${selected.length + 1}. ${otherRemark.trim()}`);
+    return selected.join("\n");
+  }, [remarkChecks, otherRemark]);
 
-  const formData = new FormData();
-  formData.append("date", date);
-  formData.append("wagonType", wagonType);
-  formData.append("bogieNo", bogieNo);
-  formData.append("bogieMake", bogieMake);
-  formData.append("bogieType", bogieType);
+  /* =======================
+     Submit
+     ======================= */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
 
-  // ✅ append file + check values safely
-  formData.append("wheelBaseCheck", wheelBase);
-  if (wheelBasePhoto) formData.append("wheelBasePhoto", wheelBasePhoto);
+    // Header
+    formData.append("date", date);
+    formData.append("wagonType", wagonType);
+    formData.append("bogieNo", bogieNo);
+    formData.append("bogieMake", bogieMake);
+    formData.append("bogieType", bogieType);
 
-  formData.append("bogieDiagonalCheck", bogieDiagonal);
-  if (diagPhoto) formData.append("bogieDiagonalPhoto", diagPhoto);
+    // Numeric + photos (field names align with your earlier backend)
+    formData.append("wheelBaseCheck", wbCheck);
+    formData.append("wheelBaseValue", wbMeasured);
+    formData.append("wheelBaseVisual", JSON.stringify(wbVisual));
+    if (wbPhoto) formData.append("wheelBasePhoto", wbPhoto);
 
-  formData.append("journalCentreCheck", journalCentre);
-if (journalPhoto) formData.append("bogieJournalCentrePhoto", journalPhoto);
+    formData.append("bogieDiagonalCheck", bdCheck);
+    formData.append("bogieDiagonalValue", bdMeasured);
+    formData.append("bogieDiagonalVisual", JSON.stringify(bdVisual));
+    if (bdPhoto) formData.append("bogieDiagonalPhoto", bdPhoto);
 
-  formData.append("sideFrameJawCheck", sideFrameJaw);
-  if (sideFrameJawPhoto) formData.append("sideFrameJawPhoto", sideFrameJawPhoto);
+    formData.append("journalCentreCheck", jcCheck);
+    formData.append("bogieJournalCentreValue", jcMeasured);
+    formData.append("bogieJournalCentreVisual", JSON.stringify(jcVisual));
+    if (jcPhoto) formData.append("bogieJournalCentrePhoto", jcPhoto);
 
-  formData.append("brakeBeamPocket", brakeBeamPocket);
-  if (brakeBeamPhoto) formData.append("brakeBeamPhoto", brakeBeamPhoto);
+    formData.append("brakeBeamPocket", bbMeasured); // matches previous schema's `value` string
+    formData.append("brakeBeamPocketCheck", bbCheck); // optional new field for status
+    formData.append("brakeBeamPocketVisual", JSON.stringify(bbVisual));
+    if (bbPhoto) formData.append("brakeBeamPhoto", bbPhoto);
 
-  formData.append("sideBearer", sideBearer);
-  if (sideBearerPhoto) formData.append("sideBearerPhoto", sideBearerPhoto);
-  
-  if (pushRodPhoto) formData.append("pushRodPhoto", pushRodPhoto);
-if (endPullRodPhoto) formData.append("endPullRodPhoto", endPullRodPhoto);
-if (brakeShoePhoto) formData.append("brakeShoePhoto", brakeShoePhoto);
-if (springPhoto) formData.append("springPhoto", springPhoto);
-  formData.append("pushRodCheck", pushRod);
-  formData.append("endPullRodCheck", endPullRod);
-  formData.append("brakeShoeType", brakeShoeType);
-  formData.append("brakeShoeCheck", brakeShoe);
-  formData.append("springVisualCheck", spring);
-  formData.append("adopterType", adopterType);
-  formData.append("remarks", remarks);
+    formData.append("sideBearer", sbMeasured); // matches previous schema
+    formData.append("sideBearerCheck", sbCheck); // optional status
+    formData.append("sideBearerRef", sbRef.text);
+    formData.append("sideBearerVisual", JSON.stringify(sbVisual));
+    if (sbPhoto) formData.append("sideBearerPhoto", sbPhoto);
 
-  try {
-    await api.post("/bogie-inspections", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    alert("✅ Inspection saved successfully!");
-  } catch (err) {
-    console.error("❌ Upload failed:", err);
-    alert("Upload failed — check console");
-  }
-};
+    // Go/No-Go & visual
+    formData.append("sideFrameJawCheck", sfjCheck);
+    formData.append("sideFrameJawVisual", JSON.stringify(sfjVisual));
+    if (sfjPhoto) formData.append("sideFrameJawPhoto", sfjPhoto);
+
+    formData.append("pushRodCheck", pushRodCheck);
+    formData.append("pushRodVisual", JSON.stringify(pushRodVisual));
+    if (pushRodPhoto) formData.append("pushRodPhoto", pushRodPhoto);
+
+    formData.append("endPullRodCheck", endPullRodCheck);
+    formData.append("endPullRodVisual", JSON.stringify(endPullRodVisual));
+    if (endPullRodPhoto) formData.append("endPullRodPhoto", endPullRodPhoto);
+
+    formData.append("brakeShoeType", brakeShoeType);
+    formData.append("brakeShoeCheck", brakeShoeCheck);
+    formData.append("brakeShoeVisual", JSON.stringify(brakeShoeVisual));
+    if (brakeShoePhoto) formData.append("brakeShoePhoto", brakeShoePhoto);
+
+    // Adopter, remarks, signature
+    formData.append("adopterType", adopterType);
+    formData.append("remarks", compiledRemarks);
+    if (inspectorSignature) formData.append("inspectorSignature", inspectorSignature);
+
+    try {
+      await api.post("/bogie-inspections", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      alert("✅ Inspection saved successfully!");
+    } catch (err) {
+      console.error("❌ Upload failed:", err);
+      alert("Upload failed — check console");
+    }
+  };
 
   return (
     <Box p={3} sx={{ background: "#eef2ff", minHeight: "100vh" }}>
       <Typography variant="h5" fontWeight={700} mb={1}>
-        BOGIE INSPECTION REPORT – AGARPARA WORKS
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Format No.: SGS/BOGIE/01 | Rev. 01 | Effective: 02-10-2025
+        INSPECTION BEFORE WHEELING – FCD - AW/SW
       </Typography>
 
-      {/* HEADER SECTION */}
+      {/* Header */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <TextField
-              label="Date"
+              label="Inspection Date"
               type="date"
               fullWidth
               value={date}
@@ -287,245 +521,325 @@ if (springPhoto) formData.append("springPhoto", springPhoto);
               value={wagonType}
               onChange={(e) => setWagonType(e.target.value)}
               fullWidth
-              sx={{
-    minWidth: 160, // ✅ ensures label text fits
-    "& .MuiInputLabel-root": {
-      whiteSpace: "nowrap", // ✅ prevents breaking or ellipsis
-      overflow: "visible",
-    },
-  }}
->
+              sx={{ minWidth: 160, "& .MuiInputLabel-root": { whiteSpace: "nowrap" } }}
+            >
               <MenuItem value="BOXN">BOXN</MenuItem>
+              <MenuItem value="BOXNS">BOXNS</MenuItem>
               <MenuItem value="BCNHL">BCNHL</MenuItem>
               <MenuItem value="BOBRN">BOBRN</MenuItem>
               <MenuItem value="BLC">BLC</MenuItem>
             </TextField>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-  <TextField
-    label="Bogie No."
-    value={bogieNo}
-    onChange={(e) => setBogieNo(e.target.value)}
-    fullWidth
-    sx={{
-      minWidth: 180,
-      "& .MuiInputLabel-root": {
-        whiteSpace: "nowrap",
-        overflow: "visible",
-        textOverflow: "unset",
-      },
-    }}
-  />
-</Grid>
-          <Grid item xs={12} sm={6} md={4}>
-  <TextField
-    select
-    label="Bogie Make"
-    value={bogieMake}
-    onChange={(e) => setBogieMake(e.target.value)}
-    fullWidth
-    sx={{
-      minWidth: 180,
-      "& .MuiInputLabel-root": {
-        whiteSpace: "nowrap",
-        overflow: "visible",
-        textOverflow: "unset",
-      },
-    }}
-  >
-    <MenuItem value="CASNUB">CASNUB</MenuItem>
-    <MenuItem value="ICF">ICF</MenuItem>
-    <MenuItem value="LHB">LHB</MenuItem>
-  </TextField>
-</Grid>
-          <Grid item xs={12} sm={6} md={4}>
-  <TextField
-    select
-    label="Bogie Type"
-    value={bogieType}
-    onChange={(e) => setBogieType(e.target.value)}
-    fullWidth
-    sx={{
-      minWidth: 180,
-      "& .MuiInputLabel-root": {
-        whiteSpace: "nowrap",
-        overflow: "visible",
-        textOverflow: "unset",
-      },
-    }}
-  >
-    <MenuItem value="22.9T">22.9T</MenuItem>
-    <MenuItem value="25T">25T</MenuItem>
-    <MenuItem value="30T">30T</MenuItem>
-  </TextField>
-</Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField label="Bogie No." fullWidth value={bogieNo} onChange={(e) => setBogieNo(e.target.value)} />
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              label="Bogie Make"
+              value={bogieMake}
+              onChange={(e) => setBogieMake(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="EMI">EMI</MenuItem>
+              <MenuItem value="CASNUB">CASNUB</MenuItem>
+              <MenuItem value="ICF">ICF</MenuItem>
+              <MenuItem value="LHB">LHB</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField select label="Bogie Type" value={bogieType} onChange={(e) => setBogieType(e.target.value)} fullWidth>
+              <MenuItem value="LWLH 25">LWLH 25</MenuItem>
+              <MenuItem value="22.9T">22.9T</MenuItem>
+              <MenuItem value="25T">25T</MenuItem>
+              <MenuItem value="30T">30T</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              label="Side Bearer Ref."
+              value={sbRef.text}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v.includes("1474")) setSbRef({ nominal: 1474, tol: 5, text: "1474 ± 5 mm" });
+                else setSbRef({ nominal: 1750, tol: 5, text: "1750 ± 5 mm" });
+              }}
+              fullWidth
+              helperText="Choose correct reference for SB centre distance"
+            >
+              <MenuItem value="1474 ± 5 mm">1474 ± 5 mm</MenuItem>
+              <MenuItem value="1750 ± 5 mm">1750 ± 5 mm (CAST Steel Bogie-LCCF 20)</MenuItem>
+            </TextField>
+          </Grid>
         </Grid>
       </Paper>
 
-      {/* MAIN FORM */}
+      {/* Main Form – order mirrors the sheet */}
       <form onSubmit={handleSubmit}>
         <Grid container spacing={2}>
-          <CheckPhotoRow
-            label="Wheel Base Check"
-            value={wheelBase}
-            onChange={setWheelBase}
-            photo={wheelBasePhoto}
-            onPhotoChange={setWheelBasePhoto}
+          {/* 1. Wheel Base */}
+          <MeasurementRow
+            label="Wheel Base"
+            refText="2000 ± 5 mm"
+            nominal={2000}
+            tolerance={5}
+            measured={wbMeasured}
+            setMeasured={setWbMeasured}
+            checkVal={wbCheck}
+            setCheckVal={setWbCheck}
+            photo={wbPhoto}
+            setPhoto={setWbPhoto}
+            auto={wbAuto}
+            setAuto={setWbAuto}
+            
           />
-          <CheckPhotoRow
-            label="Bogie Diagonal Check"
-            value={bogieDiagonal}
-            onChange={setBogieDiagonal}
-            photo={diagPhoto}
-            onPhotoChange={setDiagPhoto}
-          />
-          <CheckPhotoRow
-            label="Bogie Journal Centre Check"
-            value={journalCentre}
-            onChange={setJournalCentre}
-            photo={journalPhoto}
-            onPhotoChange={setJournalPhoto}
-          />
-          <CheckPhotoRow
-            label="Side Frame Jaw Check"
-            value={sideFrameJaw}
-            onChange={setSideFrameJaw}
-            photo={sideFrameJawPhoto}
-            onPhotoChange={setSideFrameJawPhoto}
-          />
-          <NumberPhotoRow
-            label="Brake Beam Pocket – Lateral Distance"
-            value={brakeBeamPocket}
-            setValue={setBrakeBeamPocket}
-            photo={brakeBeamPhoto}
-            onPhotoChange={setBrakeBeamPhoto}
-          />
-          <NumberPhotoRow
-            label="Side Bearer Centre Distance (1474 ± 5 mm)"
-            value={sideBearer}
-            setValue={setSideBearer}
-            photo={sideBearerPhoto}
-            onPhotoChange={setSideBearerPhoto}
-            note={
-              sideBearerFlag
-                ? sideBearerFlag === "within"
-                  ? "✅ Within tolerance"
-                  : "❌ Out of tolerance"
-                : "Enter value to check tolerance"
-            }
-          />
-        </Grid>
 
-        <Grid container spacing={2} mt={1}>
+          {/* 2. Bogie Diagonal */}
+          <MeasurementRow
+            label="Bogie Diagonal"
+            refText="3018 ± 4.5 mm"
+            nominal={3018}
+            tolerance={4.5}
+            measured={bdMeasured}
+            setMeasured={setBdMeasured}
+            checkVal={bdCheck}
+            setCheckVal={setBdCheck}
+            photo={bdPhoto}
+            setPhoto={setBdPhoto}
+            auto={bdAuto}
+            setAuto={setBdAuto}
+            
+          />
+
+          {/* 3. Bogie Journal Centre */}
+          <MeasurementRow
+            label="Bogie Journal Centre"
+            refText="2260 ± 1.5 mm"
+            nominal={2260}
+            tolerance={1.5}
+            measured={jcMeasured}
+            setMeasured={setJcMeasured}
+            checkVal={jcCheck}
+            setCheckVal={setJcCheck}
+            photo={jcPhoto}
+            setPhoto={setJcPhoto}
+            auto={jcAuto}
+            setAuto={setJcAuto}
+            visualState={jcVisual}
+            setVisualState={setJcVisual}
+          />
+
+          {/* 4. Side Frame Jaw (Go/No-Go Gauge) */}
           <CheckPhotoRow
-  label="Push Rod Check"
-  value={pushRod}
-  onChange={setPushRod}
+  label="Side Frame Jaw (Go / No-Go Gauge)"
+  checkVal={sfjCheck}
+  setCheckVal={setSfjCheck}
+  photo={sfjPhoto}
+  setPhoto={setSfjPhoto}
+  visualState={sfjVisual}        // ✅ pass visual state
+  setVisualState={setSfjVisual}  // ✅ pass setter
+/>
+
+
+          {/* 5. Brake Beam Pocket – Lateral Distance & APD */}
+          <MeasurementRow
+            label="Brake Beam Pocket – Lateral Distance & APD"
+            refText="2048 ± 1.5 mm"
+            nominal={2048}
+            tolerance={1.5}
+            measured={bbMeasured}
+            setMeasured={setBbMeasured}
+            checkVal={bbCheck}
+            setCheckVal={setBbCheck}
+            photo={bbPhoto}
+            setPhoto={setBbPhoto}
+            auto={bbAuto}
+            setAuto={setBbAuto}
+             visualState={bbVisual}
+            setVisualState={setBbVisual}
+          />
+
+          {/* 6. Side Bearer Centre Distance */}
+          <MeasurementRow
+            label="Side Bearer Centre Distance"
+            refText={sbRef.text}
+            nominal={sbRef.nominal}
+            tolerance={sbRef.tol}
+            measured={sbMeasured}
+            setMeasured={setSbMeasured}
+            checkVal={sbCheck}
+            setCheckVal={setSbCheck}
+            photo={sbPhoto}
+            setPhoto={setSbPhoto}
+            auto={sbAuto}
+            setAuto={setSbAuto}
+            visualState={sbVisual}
+            setVisualState={setSbVisual}
+          />
+
+          {/* 7. Push Rod – Visual */}
+          <CheckPhotoRow
+  label="Push Rod"
+  checkVal={pushRodCheck}
+  setCheckVal={setPushRodCheck}
   photo={pushRodPhoto}
-  onPhotoChange={setPushRodPhoto}
+  setPhoto={setPushRodPhoto}
+  visualState={pushRodVisual}        // ✅ added
+  setVisualState={setPushRodVisual}  // ✅ added
 />
-<CheckPhotoRow
-  label="End Pull Rod Check"
-  value={endPullRod}
-  onChange={setEndPullRod}
-  photo={endPullRodPhoto}
-  onPhotoChange={setEndPullRodPhoto}
-/>
-        </Grid>
 
-        <Grid container spacing={2} mt={1}>
-  <Grid item xs={12} sm={6} md={4}>
-    <TextField
-      select
-      label="Brake Shoe Type"
-      fullWidth
-      value={brakeShoeType}
-      onChange={(e) => setBrakeShoeType(e.target.value)}
-      sx={{
-        minWidth: 200, // ensures label text fits fully
-        "& .MuiInputLabel-root": {
-          whiteSpace: "nowrap", // prevent label text from breaking or truncating
-          overflow: "visible",
-          textOverflow: "unset",
-        },
-      }}
-    >
-      <MenuItem value="Cast Iron">Cast Iron</MenuItem>
-      <MenuItem value="Composite">Composite</MenuItem>
-    </TextField>
-  </Grid>
-</Grid>
-
-
-        <Grid container spacing={2} mt={1}>
+          {/* 8. End Pull Rod – Visual */}
           <CheckPhotoRow
-  label="Brake Shoe Check"
-  value={brakeShoe}
-  onChange={setBrakeShoe}
-  photo={brakeShoePhoto}
-  onPhotoChange={setBrakeShoePhoto}
+  label="End Pull Rod"
+  checkVal={endPullRodCheck}
+  setCheckVal={setEndPullRodCheck}
+  photo={endPullRodPhoto}
+  setPhoto={setEndPullRodPhoto}
+  visualState={endPullRodVisual}        // ✅ added
+  setVisualState={setEndPullRodVisual}  // ✅ added
 />
-         <CheckPhotoRow
-  label="Spring Visual Check"
-  value={spring}
-  onChange={setSpring}
-  photo={springPhoto}
-  onPhotoChange={setSpringPhoto}
-/>
+
+          {/* 9. Brake Shoe Type + Visual */}
+          
+<Grid item xs={12}>
+  <Paper sx={{ p: 2, borderRadius: 2 }}>
+    <Grid container spacing={2} alignItems="center">
+      <Grid item xs={12} md={4}>
+        <Typography fontWeight={700}>Brake Shoe</Typography>
+        <TextField
+          select
+          label='Type ("L" / "K")'
+          value={brakeShoeType}
+          onChange={(e) => setBrakeShoeType(e.target.value)}
+          fullWidth
+          size="small"
+          sx={{ mt: 1 }}
+        >
+          <MenuItem value="L">L</MenuItem>
+          <MenuItem value="K">K</MenuItem>
+        </TextField>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <TriStateSlider value={brakeShoeCheck} onChange={setBrakeShoeCheck} />
+        <Typography variant="caption" color="text.secondary">
+          Visual surface: OK / Cracks / Broken (map to slider)
+        </Typography>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Button variant="outlined" component="label" fullWidth>
+          {brakeShoePhoto ? "Replace Photo" : "Upload Photo"}
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => setBrakeShoePhoto(e.target.files?.[0] || null)}
+          />
+        </Button>
+      </Grid>
+      {brakeShoePhoto && (
+        <Grid item xs={12}>
+          <img
+            src={URL.createObjectURL(brakeShoePhoto)}
+            alt="preview"
+            style={{
+              width: "100%",
+              maxHeight: 220,
+              objectFit: "cover",
+              borderRadius: 6,
+            }}
+          />
         </Grid>
-
-        <Grid container spacing={2} mt={1}>
-  {/* ✅ Type of Adopter dropdown */}
-  <Grid item xs={12} sm={6} md={4}>
-    <TextField
-      select
-      label="Type of Adopter"
-      fullWidth
-      value={adopterType}
-      onChange={(e) => setAdopterType(e.target.value)}
-      sx={{
-        minWidth: 200,
-        "& .MuiInputLabel-root": {
-          whiteSpace: "nowrap",
-          overflow: "visible",
-          textOverflow: "unset",
-        },
-      }}
-    >
-      <MenuItem value="25T">25T</MenuItem>
-      <MenuItem value="30T">30T</MenuItem>
-      <MenuItem value="Other">Other</MenuItem>
-    </TextField>
-  </Grid>
-
-  {/* ✅ Remarks text area */}
-  <Grid item xs={12} sm={12} md={8}>
-    <TextField
-      label="Remarks"
-      multiline
-      rows={3}
-      fullWidth
-      value={remarks}
-      onChange={(e) => setRemarks(e.target.value)}
-      sx={{
-        "& .MuiInputLabel-root": {
-          whiteSpace: "nowrap",
-          overflow: "visible",
-        },
-        "& .MuiInputBase-inputMultiline": {
-          fontSize: { xs: "0.9rem", sm: "1rem" },
-        },
-      }}
-    />
-  </Grid>
+      )}
+      <Grid item xs={12}>
+        <VisualConditionGroup state={brakeShoeVisual} setState={setBrakeShoeVisual} />   {/* ✅ added */}
+      </Grid>
+    </Grid>
+  </Paper>
 </Grid>
 
-        <Button
-          variant="contained"
-          color="success"
-          type="submit"
-          sx={{ mt: 3 }}
-        >
+          {/* 10. Remarks + Adopter + Signature */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <Chip label="Remarks" color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Tick all that apply. Add other remark if needed.
+                </Typography>
+              </Stack>
+
+              <FormGroup>
+                <Grid container spacing={1}>
+                  {remarkOptions.map((opt) => (
+                    <Grid item xs={12} sm={6} key={opt}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={remarkChecks[opt]}
+                            onChange={(e) =>
+                              setRemarkChecks((s) => ({ ...s, [opt]: e.target.checked }))
+                            }
+                          />
+                        }
+                        label={opt}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </FormGroup>
+
+              <TextField
+                label="Other Remark"
+                multiline
+                rows={3}
+                fullWidth
+                value={otherRemark}
+                onChange={(e) => setOtherRemark(e.target.value)}
+                sx={{ mt: 2 }}
+              />
+
+              <Divider sx={{ my: 3 }} />
+
+              <Grid container spacing={2}>
+               
+                <Grid item xs={12} md={6}>
+                  <Button variant="outlined" component="label" fullWidth>
+                    {inspectorSignature ? "Replace Inspector Signature" : "Upload Inspector Signature"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => setInspectorSignature(e.target.files?.[0] || null)}
+                    />
+                  </Button>
+                  {inspectorSignature && (
+                    <Box sx={{ mt: 1 }}>
+                      <img
+                        src={URL.createObjectURL(inspectorSignature)}
+                        alt="signature"
+                        style={{ width: "100%", maxHeight: 180, objectFit: "contain" }}
+                      />
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
+
+              <TextField
+                label="Compiled Remarks (auto)"
+                value={compiledRemarks}
+                fullWidth
+                multiline
+                rows={5}
+                sx={{ mt: 3 }}
+                InputProps={{ readOnly: true }}
+                helperText="This is auto-generated from your checkboxes and other remark."
+              />
+            </Paper>
+          </Grid>
+        </Grid>
+
+        <Button variant="contained" color="success" type="submit" sx={{ mt: 3 }}>
           Save Inspection
         </Button>
       </form>
