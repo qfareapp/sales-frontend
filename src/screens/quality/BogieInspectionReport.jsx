@@ -34,6 +34,10 @@ export default function BogieInspectionReport() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const pdfRef = useRef(null);
+  const detailPdfRef = useRef(null);
+  const [afterReport, setAfterReport] = useState(null);
+const [afterOpen, setAfterOpen] = useState(false);
+
 
   useEffect(() => {
     fetchData();
@@ -61,6 +65,16 @@ export default function BogieInspectionReport() {
     setToDate("");
     fetchData(false);
   };
+ 
+  const fetchAfterWheelingReport = async (bogieNo) => {
+  try {
+    const { data } = await api.get(`/bogie-inspections/after-wheeling/${bogieNo}`);
+    setAfterReport(data?.data || null);
+  } catch (err) {
+    console.error("❌ Error fetching after-wheeling report:", err);
+    setAfterReport(null);
+  }
+};
 
   /* -----------------------------------------------------------
      ✅ Helpers
@@ -169,75 +183,274 @@ export default function BogieInspectionReport() {
   /* -----------------------------------------------------------
      ✅ PDF Export
   ----------------------------------------------------------- */
-  /* -----------------------------------------------------------
-   ✅ PDF Export (Fit all columns & rows on single A4 landscape)
------------------------------------------------------------ */
+  
 const handleExportPDF = async () => {
   const root = pdfRef.current;
   if (!root) return;
 
-  // Temporarily style for capture
+  // ✅ Temporarily apply capture styles
   root.classList.add("pdf-capture");
-
-  // Save original width
   const originalWidth = root.style.width;
+  const originalOverflow = root.style.overflow;
 
-  // Expand width for full table rendering
-  root.style.width = "2100px"; // make canvas wide enough for all columns
+  // ✅ Expand table fully for capture
+  root.style.width = "2100px";
+  root.style.overflow = "visible";
 
-  // Capture with high resolution
+  // ✅ Capture full scrollable content
   const canvas = await html2canvas(root, {
-    scale: 2,              // ensures crisp text
+    scale: 2,
     useCORS: true,
     allowTaint: true,
     backgroundColor: "#ffffff",
     logging: false,
-    scrollY: -window.scrollY,
+    scrollX: 0,
+    scrollY: 0,
     windowWidth: root.scrollWidth,
     windowHeight: root.scrollHeight,
   });
 
   const imgData = canvas.toDataURL("image/png");
 
-  // Create landscape PDF
+  // ✅ Create PDF in landscape mode
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "mm",
     format: "a4",
   });
 
-  // Fit the full image into one page width
-  const pdfWidth = pdf.internal.pageSize.getWidth();   // 297 mm
-  const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  // Calculate image aspect ratio to scale properly
+  // ✅ Scale image to fit width
   const imgWidth = pdfWidth;
   const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  // Scale to fit height if taller
-  const scale = imgHeight > pdfHeight ? pdfHeight / imgHeight : 1;
-  const finalWidth = imgWidth * scale;
-  const finalHeight = imgHeight * scale;
+  let heightLeft = imgHeight;
+  let position = 0;
 
-  // Center vertically
-  const xOffset = 0;
-  const yOffset = (pdfHeight - finalHeight) / 2;
+  // ✅ Add multiple pages if needed
+  while (heightLeft > 0) {
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+    position -= pdfHeight;
+    if (heightLeft > 0) pdf.addPage();
+  }
 
-  // Add image to PDF
-  pdf.addImage(imgData, "PNG", xOffset, yOffset, finalWidth, finalHeight);
-
-  // Reset styles
+  // ✅ Restore original styles
   root.style.width = originalWidth;
+  root.style.overflow = originalOverflow;
   root.classList.remove("pdf-capture");
 
-  // Save file
+  // ✅ Save file
   pdf.save(
     `Bogie_Inspection_Report_Agarpara_${new Date()
       .toISOString()
       .slice(0, 10)}.pdf`
   );
 };
+// -----------------------------------------------------------
+// ✅ Export individual bogie details from popup
+// -----------------------------------------------------------
+const handleExportDetailPDF = async () => {
+  if (!detailItem || !detailPdfRef.current) return;
 
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  /* -----------------------------------------------------------
+     1️⃣ BEFORE-WHEELING INSPECTION (Full Capture Off-Screen)
+  ----------------------------------------------------------- */
+  const beforeSection = document.createElement("div");
+  beforeSection.style.background = "#fff";
+  beforeSection.style.padding = "24px";
+  beforeSection.style.width = "1200px";
+  beforeSection.style.position = "absolute";
+  beforeSection.style.left = "-9999px";
+  beforeSection.style.top = "0";
+  beforeSection.style.zIndex = "-1";
+
+  beforeSection.innerHTML = `
+    <h2 style="text-align:center;margin-bottom:0;">Texmaco Rail & Engineering Ltd.</h2>
+    <p style="text-align:center;margin-top:2px;">Bogie Inspection Report - Agarpara Works</p>
+    <hr/>
+    <h3 style="text-align:center;font-size:16px;font-weight:bold;margin-bottom:6px;">
+      BEFORE-WHEELING INSPECTION REPORT
+    </h3>
+    <p style="font-size:12px;text-align:center;margin-bottom:10px;">
+      Bogie No: ${detailItem.bogieNo} | Date: ${new Date(detailItem.createdAt).toLocaleDateString("en-GB")}
+    </p>
+    <table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;font-size:12px;">
+      <thead>
+        <tr style="background:#f3f4f6;text-align:center;">
+          <th>Parameter</th>
+          <th>Status</th>
+          <th>Image</th>
+          <th>Visual Conditions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${[
+          ["Wheel Base", detailItem.wheelBase],
+          ["Bogie Diagonal", detailItem.bogieDiagonal],
+          ["Journal Centre", detailItem.bogieJournalCentre],
+          ["Side Frame Jaw", detailItem.sideFrameJaw],
+          ["Brake Beam Pocket", detailItem.brakeBeamPocket],
+          ["Side Bearer Centre", detailItem.sideBearerCentre],
+          ["Push Rod", detailItem.pushRodCheck],
+          ["End Pull Rod", detailItem.endPullRodCheck],
+          ["Brake Shoe", detailItem.brakeShoeCheck],
+          ["Spring Visual", detailItem.springVisualCheck],
+        ]
+          .map(
+            ([label, obj]) => `
+          <tr>
+            <td>${label}</td>
+            <td style="text-align:center;">${
+              obj?.check === 1
+                ? "OK"
+                : obj?.check === -1
+                ? "NOT OK"
+                : "Pending"
+            }</td>
+            <td style="text-align:center;">${
+              obj?.photo
+                ? `<img src="${getImageUrl(obj.photo)}" width="60" height="40"/>`
+                : "-"
+            }</td>
+            <td style="text-align:center;">${
+              obj?.visual
+                ? Object.keys(obj.visual)
+                    .filter((v) => obj.visual[v])
+                    .join(", ") || "-"
+                : "-"
+            }</td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <p style="margin-top:10px;"><strong>Adopter Type:</strong> ${
+      detailItem.adopterType || "-"
+    }</p>
+    <p><strong>Remarks:</strong> ${detailItem.remarks || "-"}</p>
+  `;
+
+  document.body.appendChild(beforeSection);
+
+  const beforeCanvas = await html2canvas(beforeSection, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: "#ffffff",
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: beforeSection.scrollWidth,
+    windowHeight: beforeSection.scrollHeight,
+  });
+
+  const beforeImg = beforeCanvas.toDataURL("image/png");
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const imgWidth = pdfWidth;
+  const imgHeight = (beforeCanvas.height * pdfWidth) / beforeCanvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  while (heightLeft > 0) {
+    pdf.addImage(beforeImg, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+    position -= pdfHeight;
+    if (heightLeft > 0) pdf.addPage();
+  }
+
+  document.body.removeChild(beforeSection);
+
+  /* -----------------------------------------------------------
+     2️⃣ AFTER-WHEELING VISUAL INSPECTION (if available)
+  ----------------------------------------------------------- */
+  if (afterReport && Object.keys(afterReport.sections || {}).length > 0) {
+    const afterSection = document.createElement("div");
+    afterSection.style.background = "#ffffff";
+    afterSection.style.padding = "24px";
+    afterSection.style.width = "1200px";
+    afterSection.style.position = "absolute";
+    afterSection.style.left = "-9999px";
+    afterSection.style.top = "0";
+    afterSection.style.zIndex = "-1";
+
+    afterSection.innerHTML = `
+      <h2 style="text-align:center;font-size:16px;font-weight:bold;margin-bottom:8px;">
+        AFTER-WHEELING VISUAL INSPECTION REPORT
+      </h2>
+      <p style="font-size:12px;text-align:center;margin-bottom:12px;">
+        Date: ${afterReport.date ? new Date(afterReport.date).toLocaleDateString("en-GB") : "-"} |
+        Inspector: ${afterReport.inspectorName || "-"}
+      </p>
+      ${Object.entries(afterReport.sections)
+        .map(
+          ([section, values]) => `
+            <div style="margin-bottom:10px;padding:8px;border:1px solid #ccc;border-radius:6px;">
+              <strong>${section.replace(/([A-Z])/g, " $1")}</strong><br/>
+              ${
+                Array.isArray(values) && values.length > 0
+                  ? values
+                      .map(
+                        (v) =>
+                          `<span style="display:inline-block;margin:3px 4px;padding:3px 6px;border:1px solid #ccc;border-radius:3px;background:#e0f7fa;font-size:11px;">${v}</span>`
+                      )
+                      .join("")
+                  : `<em>-</em>`
+              }
+            </div>`
+        )
+        .join("")}
+      <hr style="margin:12px 0;"/>
+      <p style="font-size:12px;"><strong>Remarks:</strong> ${
+        afterReport.remarks || "-"
+      }</p>
+    `;
+
+    document.body.appendChild(afterSection);
+
+    const afterCanvas = await html2canvas(afterSection, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: afterSection.scrollWidth,
+      windowHeight: afterSection.scrollHeight,
+    });
+
+    const afterImg = afterCanvas.toDataURL("image/png");
+    pdf.addPage();
+
+    const afterImgHeight = (afterCanvas.height * pdfWidth) / afterCanvas.width;
+    let afterHeightLeft = afterImgHeight;
+    let afterPosition = 0;
+
+    while (afterHeightLeft > 0) {
+      pdf.addImage(afterImg, "PNG", 0, afterPosition, pdfWidth, afterImgHeight);
+      afterHeightLeft -= pdfHeight;
+      afterPosition -= pdfHeight;
+      if (afterHeightLeft > 0) pdf.addPage();
+    }
+
+    document.body.removeChild(afterSection);
+  }
+
+  /* -----------------------------------------------------------
+     3️⃣ Save Final PDF
+  ----------------------------------------------------------- */
+  pdf.save(`Bogie_${detailItem.bogieNo}_Inspection_Report.pdf`);
+};
 
   /* -----------------------------------------------------------
      ✅ Render
@@ -329,18 +542,22 @@ const handleExportPDF = async () => {
 
                   {/* 🔗 Clickable Bogie No */}
                   <TableCell>
-                    <Button
-                      variant="text"
-                      sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        color: "#1a73e8",
-                      }}
-                      onClick={() => setDetailItem(row)}
-                    >
-                      {row.bogieNo}
-                    </Button>
-                  </TableCell>
+  <Button
+    variant="text"
+    sx={{
+      textTransform: "none",
+      fontWeight: 600,
+      color: "#1a73e8",
+    }}
+    onClick={() => {
+      setDetailItem(row);
+      fetchAfterWheelingReport(row.bogieNo); // ✅ fetch visual inspection too
+    }}
+  >
+    {row.bogieNo}
+  </Button>
+</TableCell>
+
 
                   <TableCell>{row.bogieMake}</TableCell>
                   <TableCell>{row.bogieType}</TableCell>
@@ -368,81 +585,178 @@ const handleExportPDF = async () => {
                   <TableCell align="center">{row.adopterType}</TableCell>
                   <TableCell align="center">{row.remarks}</TableCell>
                 </TableRow>
+                
               ))}
             </TableBody>
           </Table>
+          
         </Paper>
       </Box>
 
       {/* 🟢 Detail Modal */}
-      <Dialog open={!!detailItem} onClose={() => setDetailItem(null)} fullWidth maxWidth="md">
-        {detailItem && (
-          <>
-            <DialogTitle>
-              <Typography fontWeight={700}>
-                Bogie Inspection — {detailItem.bogieNo}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Date: {formatDateTime(detailItem.createdAt)}
-              </Typography>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Typography fontWeight={700} sx={{ mb: 1 }}>
-                Inspection Parameters
-              </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ background: "#f3f4f6" }}>
-                    <TableCell>Parameter</TableCell>
-                    <TableCell align="center">Status</TableCell>
-                    <TableCell align="center">Image</TableCell>
-                    <TableCell align="center">Visual Conditions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[
-                    ["Wheel Base", detailItem.wheelBase],
-                    ["Bogie Diagonal", detailItem.bogieDiagonal],
-                    ["Journal Centre", detailItem.bogieJournalCentre],
-                    ["Side Frame Jaw", detailItem.sideFrameJaw],
-                    ["Brake Beam Pocket", detailItem.brakeBeamPocket],
-                    ["Side Bearer Centre", detailItem.sideBearerCentre],
-                    ["Push Rod", detailItem.pushRodCheck],
-                    ["End Pull Rod", detailItem.endPullRodCheck],
-                    ["Brake Shoe", detailItem.brakeShoeCheck],
-                    ["Spring Visual", detailItem.springVisualCheck],
-                  ].map(([label, obj]) => (
-                    <TableRow key={label}>
-                      <TableCell>{label}</TableCell>
-                      <TableCell align="center">{renderCheckChip(obj)}</TableCell>
-                      <TableCell align="center"><PhotoThumb file={obj?.photo} /></TableCell>
-                      <TableCell align="center">{renderVisualList(obj?.visual)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <Divider sx={{ my: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography fontWeight={700}>Adopter Type</Typography>
-                  <Typography>{detailItem.adopterType || "-"}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography fontWeight={700}>Inspector Signature</Typography>
-                  <PhotoThumb file={detailItem.inspectorSignature} />
-                </Grid>
-                <Grid item xs={12}>
+      {/* 🟢 Detail Modal */}
+<Dialog open={!!detailItem} onClose={() => setDetailItem(null)} fullWidth maxWidth="md">
+  {detailItem && (
+    <>
+      <DialogTitle>
+        <Typography fontWeight={700}>
+          Bogie Inspection — {detailItem.bogieNo}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Date: {formatDateTime(detailItem.createdAt)}
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent dividers ref={detailPdfRef}>
+        <Typography fontWeight={700} sx={{ mb: 1 }}>
+          Inspection Parameters
+        </Typography>
+
+        {/* ==================== Before-Wheeling Inspection ==================== */}
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ background: "#f3f4f6" }}>
+              <TableCell>Parameter</TableCell>
+              <TableCell align="center">Status</TableCell>
+              <TableCell align="center">Image</TableCell>
+              <TableCell align="center">Visual Conditions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {[
+              ["Wheel Base", detailItem.wheelBase],
+              ["Bogie Diagonal", detailItem.bogieDiagonal],
+              ["Journal Centre", detailItem.bogieJournalCentre],
+              ["Side Frame Jaw", detailItem.sideFrameJaw],
+              ["Brake Beam Pocket", detailItem.brakeBeamPocket],
+              ["Side Bearer Centre", detailItem.sideBearerCentre],
+              ["Push Rod", detailItem.pushRodCheck],
+              ["End Pull Rod", detailItem.endPullRodCheck],
+              ["Brake Shoe", detailItem.brakeShoeCheck],
+              ["Spring Visual", detailItem.springVisualCheck],
+            ].map(([label, obj]) => (
+              <TableRow key={label}>
+                <TableCell>{label}</TableCell>
+                <TableCell align="center">{renderCheckChip(obj)}</TableCell>
+                <TableCell align="center">
+                  <PhotoThumb file={obj?.photo} />
+                </TableCell>
+                <TableCell align="center">{renderVisualList(obj?.visual)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography fontWeight={700}>Adopter Type</Typography>
+            <Typography>{detailItem.adopterType || "-"}</Typography>
+          </Grid>
+          <Grid item xs={6}>
+            <Typography fontWeight={700}>Inspector Signature</Typography>
+            <PhotoThumb file={detailItem.inspectorSignature} />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography fontWeight={700}>Remarks</Typography>
+            <Typography>{detailItem.remarks || "-"}</Typography>
+          </Grid>
+        </Grid>
+
+        {/* ==================== Collapsible After-Wheeling Report ==================== */}
+        <Box sx={{ mt: 3 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={() => setAfterOpen(!afterOpen)}
+            sx={{ mb: 1 }}
+          >
+            {afterOpen
+              ? "Hide After-Wheeling Visual Inspection"
+              : "Show After-Wheeling Visual Inspection"}
+          </Button>
+
+          {afterOpen && (
+            <Paper sx={{ p: 2, background: "#fafafa", borderRadius: 2 }}>
+              {afterReport ? (
+                <>
+                  <Typography fontWeight={700} mb={1}>
+                    After-Wheeling Visual Inspection Report
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" mb={2}>
+                    Date:{" "}
+                    {afterReport.date
+                      ? new Date(afterReport.date).toLocaleDateString("en-GB")
+                      : "-"}{" "}
+                    | Inspector: {afterReport.inspectorName || "-"}
+                  </Typography>
+
+                  <Grid container spacing={1}>
+                    {Object.entries(afterReport.sections || {}).map(
+                      ([section, values]) => (
+                        <Grid item xs={12} md={6} key={section}>
+                          <Paper sx={{ p: 2, mb: 1 }}>
+                            <Typography fontWeight={700}>
+                              {section.replace(/([A-Z])/g, " $1")}
+                            </Typography>
+                            {Array.isArray(values) && values.length > 0 ? (
+                              values.map((v) => (
+                                <Chip
+                                  key={v}
+                                  label={v}
+                                  size="small"
+                                  sx={{
+                                    mr: 0.5,
+                                    mb: 0.5,
+                                    background: "#e0f7fa",
+                                  }}
+                                />
+                              ))
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                -
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Grid>
+                      )
+                    )}
+                  </Grid>
+
+                  <Divider sx={{ my: 2 }} />
                   <Typography fontWeight={700}>Remarks</Typography>
-                  <Typography>{detailItem.remarks || "-"}</Typography>
-                </Grid>
-              </Grid>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailItem(null)}>Close</Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+                  <Typography>{afterReport.remarks || "-"}</Typography>
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No After-Wheeling Visual Inspection record found for this
+                  bogie.
+                </Typography>
+              )}
+            </Paper>
+          )}
+        </Box>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={() => setDetailItem(null)}>Close</Button>
+        <Button
+  variant="contained"
+  color="warning"
+  onClick={handleExportDetailPDF}
+>
+  Download PDF
+</Button>
+
+      </DialogActions>
+    </>
+  )}
+</Dialog>
+
 
       {/* 🖼️ Image Viewer */}
       <Dialog open={!!selectedImage} onClose={() => setSelectedImage(null)} maxWidth="md">
@@ -500,4 +814,27 @@ const handleExportPDF = async () => {
   .pdf-capture {
     background: #fff !important;
   }
+    .pdf-capture {
+  background: #fff !important;
+}
+
+.pdf-capture table {
+  width: 100% !important;
+  border-collapse: collapse;
+}
+
+.pdf-capture th,
+.pdf-capture td {
+  font-size: 9px !important;
+  padding: 4px 3px !important;
+  border: 0.3px solid #aaa;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.pdf-capture img {
+  max-width: 80px !important;
+  height: auto !important;
+  border-radius: 3px !important;
+}
 `}</style>
