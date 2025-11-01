@@ -335,6 +335,7 @@ export default function BogieInspectionForm() {
   const [bogieNo, setBogieNo] = useState("");
   const [bogieMake, setBogieMake] = useState("");
   const [bogieType, setBogieType] = useState("");
+  const [bogieModel, setBogieModel] = useState("");
 
   /* =======================
      Numeric checks (+ auto)
@@ -435,6 +436,7 @@ export default function BogieInspectionForm() {
     formData.append("bogieNo", bogieNo);
     formData.append("bogieMake", bogieMake);
     formData.append("bogieType", bogieType);
+    formData.append("bogieModel", bogieModel);
 
     // Numeric + photos (field names align with your earlier backend)
     formData.append("wheelBaseCheck", wbCheck);
@@ -523,11 +525,17 @@ export default function BogieInspectionForm() {
               fullWidth
               sx={{ minWidth: 160, "& .MuiInputLabel-root": { whiteSpace: "nowrap" } }}
             >
-              <MenuItem value="BOXN">BOXN</MenuItem>
               <MenuItem value="BOXNS">BOXNS</MenuItem>
-              <MenuItem value="BCNHL">BCNHL</MenuItem>
-              <MenuItem value="BOBRN">BOBRN</MenuItem>
-              <MenuItem value="BLC">BLC</MenuItem>
+              <MenuItem value="BOXNHL">BOXNHL</MenuItem>
+              <MenuItem value="BCNAHSM1">BCNAHSM1</MenuItem>
+              <MenuItem value="BOBRNHSM2">BOBRNHSM2</MenuItem>
+              <MenuItem value="BLCS">BLCS</MenuItem>
+              <MenuItem value="BTAPM1">BTAPM1</MenuItem>
+              <MenuItem value="BLSS">BLSS</MenuItem>
+              <MenuItem value="FMP">FMP</MenuItem>
+              <MenuItem value="CAMALCO">CAMALCO</MenuItem>
+              <MenuItem value="BCBFG">BCBFG</MenuItem>
+              <MenuItem value="BTCS">BTCS</MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -541,21 +549,46 @@ export default function BogieInspectionForm() {
               value={bogieMake}
               onChange={(e) => setBogieMake(e.target.value)}
               fullWidth
+              sx={{
+    minWidth: 150,
+    '& .MuiInputLabel-root': { whiteSpace: 'normal' },  // allow wrapping
+  }}
             >
               <MenuItem value="EMI">EMI</MenuItem>
-              <MenuItem value="CASNUB">CASNUB</MenuItem>
-              <MenuItem value="ICF">ICF</MenuItem>
-              <MenuItem value="LHB">LHB</MenuItem>
+              <MenuItem value="NF">NF</MenuItem>
+              <MenuItem value="JEKAY">JEKAY</MenuItem>
+              <MenuItem value="TEXMACO (URLA)">TEXMACO (URLA)</MenuItem>
+              <MenuItem value="TEXMACO (SF)">TEXMACO (SF)</MenuItem>
+              <MenuItem value="SK">SK</MenuItem>
+              <MenuItem value="BAL">BAL</MenuItem>
+              <MenuItem value="RV Casting">RV Casting</MenuItem>
+              <MenuItem value="Brand Alloy">Brand Alloy</MenuItem>
+              <MenuItem value="LCPL">LCPL</MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <TextField select label="Bogie Type" value={bogieType} onChange={(e) => setBogieType(e.target.value)} fullWidth>
-              <MenuItem value="LWLH 25">LWLH 25</MenuItem>
-              <MenuItem value="22.9T">22.9T</MenuItem>
-              <MenuItem value="25T">25T</MenuItem>
-              <MenuItem value="30T">30T</MenuItem>
+            <TextField select label="Bogie Type" value={bogieType} onChange={(e) => setBogieType(e.target.value)} fullWidth
+              sx={{
+    minWidth: 150,
+    '& .MuiInputLabel-root': { whiteSpace: 'normal' },  // allow wrapping
+  }}>
+              <MenuItem value="CASNUB">CASNUB</MenuItem>
+              <MenuItem value="LWLH">LWLH</MenuItem>
             </TextField>
           </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <TextField select label="Bogie Model" value={bogieModel} onChange={(e) => setBogieModel(e.target.value)} fullWidth
+              sx={{
+    minWidth: 150,
+    '& .MuiInputLabel-root': { whiteSpace: 'normal' },  // allow wrapping
+  }}>
+              <MenuItem value="22 HS">22 HS</MenuItem>
+              <MenuItem value="NLB">NLB</MenuItem>
+              <MenuItem value="25">25</MenuItem>
+            </TextField>
+          </Grid>
+
           <Grid item xs={12} sm={4}>
             <TextField
               select

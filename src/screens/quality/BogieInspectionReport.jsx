@@ -87,10 +87,15 @@ const [afterOpen, setAfterOpen] = useState(false);
       .replace(/:\d+ /, " ")}`;
   };
 
-  const getImageUrl = (filename) =>
-    filename
-      ? `${import.meta.env.VITE_API_BASE_URL}/uploads/bogie-inspections/${filename}`
-      : null;
+  // ✅ Works for both old local files & new Cloudinary uploads
+const getImageUrl = (filename) => {
+  if (!filename) return null;
+  // Already a Cloudinary/external URL
+  if (filename.startsWith("http")) return filename;
+  // Fallback for older local uploads
+  return `${import.meta.env.VITE_API_BASE_URL}/uploads/bogie-inspections/${filename}`;
+};
+
 
   const renderCheck = (obj) => {
     if (!obj) return "Pending";
@@ -123,7 +128,7 @@ const [afterOpen, setAfterOpen] = useState(false);
   };
 
   const PhotoThumb = ({ file }) => {
-    const src = getImageUrl(file);
+    const src = getImageUrl(file, true);
     if (!src) return <em>-</em>;
     return (
       <img
