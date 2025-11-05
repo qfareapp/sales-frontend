@@ -37,6 +37,9 @@ export default function BogieInspectionReport() {
   const detailPdfRef = useRef(null);
   const [afterReport, setAfterReport] = useState(null);
 const [afterOpen, setAfterOpen] = useState(false);
+const [editMode, setEditMode] = useState(false);
+const [editForm, setEditForm] = useState({});
+
 
 
   useEffect(() => {
@@ -457,9 +460,60 @@ const handleExportDetailPDF = async () => {
   pdf.save(`Bogie_${detailItem.bogieNo}_Inspection_Report.pdf`);
 };
 
+const handleEditClick = () => {
+  // Deep clone current record into editable state
+  const clone = structuredClone(detailItem);
+
+  // 🛠️ Initialize missing nested objects to avoid undefined errors
+  [
+    "wheelBase",
+    "bogieDiagonal",
+    "bogieJournalCentre",
+    "sideFrameJaw",
+    "brakeBeamPocket",
+    "sideBearerCentre",
+    "pushRodCheck",
+    "endPullRodCheck",
+    "brakeShoeCheck",
+    "springVisualCheck",
+  ].forEach((key) => {
+    if (!clone[key]) clone[key] = { check: 0, photo: "", visual: {} };
+  });
+
+  setEditForm(clone);
+  setEditMode(true);
+};
+
+const handleEditChange = (path, value) => {
+  setEditForm((prev) => {
+    const updated = { ...prev };
+    const keys = path.split(".");
+    let obj = updated;
+    for (let i = 0; i < keys.length - 1; i++) {
+      obj[keys[i]] = obj[keys[i]] || {};
+      obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+    return updated;
+  });
+};
+
+const handleSaveUpdate = async () => {
+  try {
+    const res = await api.put(`/bogie-inspections/${editForm._id}`, editForm);
+    alert("✅ Inspection updated successfully!");
+    setDetailItem(res.data.data);  // update modal with latest data
+    setEditMode(false);            // exit edit mode
+    fetchData();                   // refresh main table
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed to update inspection data");
+  }
+};
   /* -----------------------------------------------------------
      ✅ Render
   ----------------------------------------------------------- */
+
   return (
     <Box p={3} sx={{ background: "#eef2ff", minHeight: "100vh" }}>
       {/* Controls */}
@@ -613,151 +667,314 @@ const handleExportDetailPDF = async () => {
       </DialogTitle>
 
       <DialogContent dividers ref={detailPdfRef}>
-        <Typography fontWeight={700} sx={{ mb: 1 }}>
-          Inspection Parameters
-        </Typography>
+  <Typography fontWeight={700} sx={{ mb: 1 }}>
+    Inspection Parameters
+  </Typography>
 
-        {/* ==================== Before-Wheeling Inspection ==================== */}
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ background: "#f3f4f6" }}>
-              <TableCell>Parameter</TableCell>
-              <TableCell align="center">Status</TableCell>
-              <TableCell align="center">Image</TableCell>
-              <TableCell align="center">Visual Conditions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {[
-              ["Wheel Base", detailItem.wheelBase],
-              ["Bogie Diagonal", detailItem.bogieDiagonal],
-              ["Journal Centre", detailItem.bogieJournalCentre],
-              ["Side Frame Jaw", detailItem.sideFrameJaw],
-              ["Brake Beam Pocket", detailItem.brakeBeamPocket],
-              ["Side Bearer Centre", detailItem.sideBearerCentre],
-              ["Push Rod", detailItem.pushRodCheck],
-              ["End Pull Rod", detailItem.endPullRodCheck],
-              ["Brake Shoe", detailItem.brakeShoeCheck],
-              ["Spring Visual", detailItem.springVisualCheck],
-            ].map(([label, obj]) => (
-              <TableRow key={label}>
-                <TableCell>{label}</TableCell>
-                <TableCell align="center">{renderCheckChip(obj)}</TableCell>
-                <TableCell align="center">
-                  <PhotoThumb file={obj?.photo} />
-                </TableCell>
-                <TableCell align="center">{renderVisualList(obj?.visual)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+  {/* ==================== Before-Wheeling Inspection (Editable) ==================== */}
+  <Table size="small">
+  <TableHead>
+    <TableRow sx={{ background: "#f3f4f6" }}>
+      <TableCell>Parameter</TableCell>
+      <TableCell align="center">Measured Value</TableCell>
+      <TableCell align="center">Status</TableCell>
+      <TableCell align="center">Image</TableCell>
+      <TableCell align="center">Visual Conditions</TableCell>
+    </TableRow>
+  </TableHead>
 
-        <Divider sx={{ my: 2 }} />
+  <TableBody>
+    {[
+      ["Wheel Base", "wheelBase"],
+      ["Bogie Diagonal", "bogieDiagonal"],
+      ["Journal Centre", "bogieJournalCentre"],
+      ["Side Frame Jaw", "sideFrameJaw"],
+      ["Brake Beam Pocket", "brakeBeamPocket"],
+      ["Side Bearer Centre", "sideBearerCentre"],
+      ["Push Rod", "pushRodCheck"],
+      ["End Pull Rod", "endPullRodCheck"],
+      ["Brake Shoe", "brakeShoeCheck"],
+      ["Spring Visual", "springVisualCheck"],
+    ].map(([label, key]) => {
+      const obj = editMode ? editForm[key] : detailItem[key];
 
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <Typography fontWeight={700}>Adopter Type</Typography>
-            <Typography>{detailItem.adopterType || "-"}</Typography>
-          </Grid>
-          <Grid item xs={6}>
-            <Typography fontWeight={700}>Inspector Signature</Typography>
-            <PhotoThumb file={detailItem.inspectorSignature} />
-          </Grid>
-          <Grid item xs={12}>
-            <Typography fontWeight={700}>Remarks</Typography>
-            <Typography>{detailItem.remarks || "-"}</Typography>
-          </Grid>
-        </Grid>
+      // ✅ Only these have numeric measured values
+      const measurableFields = [
+        "wheelBase",
+        "bogieDiagonal",
+        "bogieJournalCentre",
+        "brakeBeamPocket",
+        "sideBearerCentre",
+      ];
+      const isMeasurable = measurableFields.includes(key);
 
-        {/* ==================== Collapsible After-Wheeling Report ==================== */}
-        <Box sx={{ mt: 3 }}>
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => setAfterOpen(!afterOpen)}
-            sx={{ mb: 1 }}
-          >
-            {afterOpen
-              ? "Hide After-Wheeling Visual Inspection"
-              : "Show After-Wheeling Visual Inspection"}
-          </Button>
+      return (
+        <TableRow key={key}>
+          <TableCell>{label}</TableCell>
 
-          {afterOpen && (
-            <Paper sx={{ p: 2, background: "#fafafa", borderRadius: 2 }}>
-              {afterReport ? (
-                <>
-                  <Typography fontWeight={700} mb={1}>
-                    After-Wheeling Visual Inspection Report
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" mb={2}>
-                    Date:{" "}
-                    {afterReport.date
-                      ? new Date(afterReport.date).toLocaleDateString("en-GB")
-                      : "-"}{" "}
-                    | Inspector: {afterReport.inspectorName || "-"}
-                  </Typography>
+         {/* ✅ Measured Value Column (Editable) */}
+<TableCell align="center">
+  {(() => {
+    const isMeasurable = [
+      "wheelBase",
+      "bogieDiagonal",
+      "bogieJournalCentre",
+      "brakeBeamPocket",
+      "sideBearerCentre",
+    ].includes(key);
 
-                  <Grid container spacing={1}>
-                    {Object.entries(afterReport.sections || {}).map(
-                      ([section, values]) => (
-                        <Grid item xs={12} md={6} key={section}>
-                          <Paper sx={{ p: 2, mb: 1 }}>
-                            <Typography fontWeight={700}>
-                              {section.replace(/([A-Z])/g, " $1")}
-                            </Typography>
-                            {Array.isArray(values) && values.length > 0 ? (
-                              values.map((v) => (
-                                <Chip
-                                  key={v}
-                                  label={v}
-                                  size="small"
-                                  sx={{
-                                    mr: 0.5,
-                                    mb: 0.5,
-                                    background: "#e0f7fa",
-                                  }}
-                                />
-                              ))
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                -
-                              </Typography>
-                            )}
-                          </Paper>
-                        </Grid>
-                      )
-                    )}
+    if (!isMeasurable)
+      return <Typography color="text.secondary">–</Typography>;
+
+    // Show editable field if edit mode is active
+    if (editMode) {
+      return (
+        <TextField
+          type="number"
+          size="small"
+          value={obj?.value || ""}
+          placeholder="Enter value"
+          onChange={(e) =>
+            handleEditChange(`${key}.value`, e.target.value)
+          }
+          InputProps={{
+            endAdornment: (
+              <Typography
+                sx={{ ml: 0.5, color: "text.secondary", fontSize: 12 }}
+              >
+                mm
+              </Typography>
+            ),
+          }}
+          sx={{
+            width: 120,
+            "& input": { textAlign: "center" },
+          }}
+        />
+      );
+    }
+
+    // Otherwise, show the saved measured value (or dash)
+    return obj?.value ? (
+      <Typography fontWeight={600}>{obj.value} mm</Typography>
+    ) : (
+      <Typography color="text.secondary">–</Typography>
+    );
+  })()}
+</TableCell>
+
+
+          {/* ✅ Status */}
+          <TableCell align="center">
+            {editMode ? (
+              <TextField
+                select
+                size="small"
+                value={obj?.check ?? 0}
+                onChange={(e) =>
+                  handleEditChange(`${key}.check`, parseInt(e.target.value))
+                }
+                SelectProps={{ native: true }}
+                sx={{ width: 110 }}
+              >
+                <option value="1">OK</option>
+                <option value="-1">NOT OK</option>
+                <option value="0">Pending</option>
+              </TextField>
+            ) : (
+              renderCheckChip(obj)
+            )}
+          </TableCell>
+
+          {/* ✅ Photo */}
+          <TableCell align="center">
+            {editMode ? (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  handleEditChange(`${key}.photo`, e.target.files[0]?.name)
+                }
+              />
+            ) : (
+              <PhotoThumb file={obj?.photo} />
+            )}
+          </TableCell>
+
+          {/* ✅ Visual Conditions */}
+          <TableCell align="center">
+            {editMode ? (
+              <TextField
+                placeholder="Enter comma-separated visuals"
+                size="small"
+                fullWidth
+                value={
+                  obj?.visual
+                    ? Object.keys(obj.visual)
+                        .filter((k) => obj.visual[k])
+                        .join(", ")
+                    : ""
+                }
+                onChange={(e) => {
+                  const values = e.target.value
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean);
+                  const visualObj = {};
+                  values.forEach((v) => (visualObj[v] = true));
+                  handleEditChange(`${key}.visual`, visualObj);
+                }}
+              />
+            ) : (
+              renderVisualList(obj?.visual)
+            )}
+          </TableCell>
+        </TableRow>
+      );
+    })}
+  </TableBody>
+</Table>
+
+<Divider sx={{ my: 2 }} />
+
+
+  {/* ==================== Other Fields ==================== */}
+  <Grid container spacing={2}>
+  <Grid item xs={6}>
+    <Typography fontWeight={700}>Adopter Type</Typography>
+    {editMode ? (
+      <TextField
+        fullWidth
+        size="small"
+        value={editForm.adopterType || ""}
+        onChange={(e) => handleEditChange("adopterType", e.target.value)}
+      />
+    ) : (
+      <Typography>{detailItem.adopterType || "-"}</Typography>
+    )}
+  </Grid>
+
+  <Grid item xs={6}>
+    <Typography fontWeight={700}>Inspector Signature</Typography>
+    <PhotoThumb file={detailItem.inspectorSignature} />
+  </Grid>
+
+  <Grid item xs={12}>
+    <Typography fontWeight={700}>Remarks</Typography>
+    {editMode ? (
+      <TextField
+        fullWidth
+        multiline
+        minRows={2}
+        value={editForm.remarks || ""}
+        onChange={(e) => handleEditChange("remarks", e.target.value)}
+      />
+    ) : (
+      <Typography>{detailItem.remarks || "-"}</Typography>
+    )}
+  </Grid>
+</Grid>
+
+  {/* ==================== After-Wheeling Report ==================== */}
+  <Box sx={{ mt: 3 }}>
+    <Button
+      variant="outlined"
+      fullWidth
+      onClick={() => setAfterOpen(!afterOpen)}
+      sx={{ mb: 1 }}
+    >
+      {afterOpen
+        ? "Hide After-Wheeling Visual Inspection"
+        : "Show After-Wheeling Visual Inspection"}
+    </Button>
+
+    {afterOpen && (
+      <Paper sx={{ p: 2, background: "#fafafa", borderRadius: 2 }}>
+        {afterReport ? (
+          <>
+            <Typography fontWeight={700} mb={1}>
+              After-Wheeling Visual Inspection Report
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Date:{" "}
+              {afterReport.date
+                ? new Date(afterReport.date).toLocaleDateString("en-GB")
+                : "-"}{" "}
+              | Inspector: {afterReport.inspectorName || "-"}
+            </Typography>
+
+            <Grid container spacing={1}>
+              {Object.entries(afterReport.sections || {}).map(
+                ([section, values]) => (
+                  <Grid item xs={12} md={6} key={section}>
+                    <Paper sx={{ p: 2, mb: 1 }}>
+                      <Typography fontWeight={700}>
+                        {section.replace(/([A-Z])/g, " $1")}
+                      </Typography>
+                      {Array.isArray(values) && values.length > 0 ? (
+                        values.map((v) => (
+                          <Chip
+                            key={v}
+                            label={v}
+                            size="small"
+                            sx={{
+                              mr: 0.5,
+                              mb: 0.5,
+                              background: "#e0f7fa",
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          -
+                        </Typography>
+                      )}
+                    </Paper>
                   </Grid>
-
-                  <Divider sx={{ my: 2 }} />
-                  <Typography fontWeight={700}>Remarks</Typography>
-                  <Typography>{afterReport.remarks || "-"}</Typography>
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No After-Wheeling Visual Inspection record found for this
-                  bogie.
-                </Typography>
+                )
               )}
-            </Paper>
-          )}
-        </Box>
-      </DialogContent>
+            </Grid>
+
+            <Divider sx={{ my: 2 }} />
+            <Typography fontWeight={700}>Remarks</Typography>
+            <Typography>{afterReport.remarks || "-"}</Typography>
+          </>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            No After-Wheeling Visual Inspection record found for this bogie.
+          </Typography>
+        )}
+      </Paper>
+    )}
+  </Box>
+</DialogContent>
 
       <DialogActions>
-        <Button onClick={() => setDetailItem(null)}>Close</Button>
-        <Button
-  variant="contained"
-  color="warning"
-  onClick={handleExportDetailPDF}
->
-  Download PDF
-</Button>
+  {!editMode ? (
+    <>
+      <Button onClick={() => setDetailItem(null)}>Close</Button>
+      <Button variant="contained" color="info" onClick={handleEditClick}>
+        Edit
+      </Button>
+      <Button variant="contained" color="warning" onClick={handleExportDetailPDF}>
+        Download PDF
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button color="secondary" onClick={() => setEditMode(false)}>
+        Cancel
+      </Button>
+      <Button variant="contained" color="success" onClick={handleSaveUpdate}>
+        Save Changes
+      </Button>
+    </>
+  )}
+</DialogActions>
 
-      </DialogActions>
     </>
   )}
 </Dialog>
