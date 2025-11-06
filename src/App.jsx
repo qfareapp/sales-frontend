@@ -22,8 +22,31 @@ import DashboardHome from './screens/DashboardHome'; // adjust path as needed
 import SalesProdEntryForm from "./screens/sales/SalesProdEntryForm";
 import SalesProdDashboard from "./screens/sales/SalesProdDashboard";
 import BogiePostWheelInspectionForm from './screens/quality/BogiePostWheelInspectionForm';
+import TexmacoAccessPortal from './screens/Login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
+
+// ✅ Protected Route for role-based access
+import { Navigate } from "react-router-dom";
+
+function ProtectedRoute({ children, allowedRoles }) {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  // ✅ Step 1: If user is not logged in at all, redirect immediately
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ✅ Step 2: If logged in but wrong role, deny access
+  if (!allowedRoles.includes(role)) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ✅ Step 3: Otherwise, show the requested page
+  return children;
+}
+
 
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
@@ -63,6 +86,16 @@ const LayoutWrapper = ({ children }) => {
           >
             ☰
           </button>
+          <button
+  className="btn btn-sm btn-light ms-2"
+  onClick={() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    window.location.href = "/login";
+  }}
+>
+  Logout
+</button>
           </span>
 
           
@@ -241,36 +274,142 @@ function App() {
     <Router>
       <LayoutWrapper>
         <Routes>
-          <Route path="/enquiry-form" element={<EnquiryForm />} />
-          <Route path="/" element={<EnquiryListScreen />} />
-          <Route path="/enquiry/:id" element={<EnquiryUpdateForm />} />
-          <Route path="/daily-update" element={<DailyUpdateForm />} />
-          <Route path="/project/:id" element={<ProjectDetails />} />
-          <Route path="/delivery-details/:projectId" element={<ProjectDetailsScreen />} />
-          <Route path="/production" element={<ProductionHomeScreen />} />
-          <Route path="/production/:projectId" element={<ProductionDetailsScreen />} />
-          <Route path="/monthly-planning" element={<MonthlyPlanningForm />} />
-          <Route path="/manage-wagon-types" element={<ManageWagonTypesScreen />} />
-          <Route path="/daily-production" element={<DailyProductionForm />} />
-          {/*<Route path="/planning/:projectId" element={<PlanningForm />} />*/}
-          <Route path="/quality-dashboard" element={<QualityDashboard />} />
-<Route path="/bogie-inspection-form" element={<BogieInspectionForm />} />
-<Route path="/bogie-inspection-report" element={<BogieInspectionReport />} />
-<Route path="/bogie-after-wheel-inspection" element={<BogiePostWheelInspectionForm />} />
-<Route path="/sales/production-entry" element={<SalesProdEntryForm />} />
-<Route path="/sales/production-dashboard" element={<SalesProdDashboard />} />
+          {/* 🔓 Public Route */}
+          <Route path="/login" element={<TexmacoAccessPortal />} />
 
-{/*<Route path="/gantt/:projectId" element={<ProjectGantt />} />
-<Route path="/planning" element={<PlanningDashboard />} />
-<Route path="/gantt" element={<PlanningDashboard defaultTab="gantt" />} />
+          {/* 🔒 Sales Module */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <EnquiryListScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/enquiry-form"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <EnquiryForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/enquiry/:id"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <EnquiryUpdateForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/daily-update"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <DailyUpdateForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales/production-entry"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <SalesProdEntryForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales/production-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["sales"]}>
+                <SalesProdDashboard />
+              </ProtectedRoute>
+            }
+          />
 
+          {/* 🔒 Production Module */}
+          <Route
+            path="/production"
+            element={
+              <ProtectedRoute allowedRoles={["production"]}>
+                <ProductionHomeScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/production/:projectId"
+            element={
+              <ProtectedRoute allowedRoles={["production"]}>
+                <ProductionDetailsScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monthly-planning"
+            element={
+              <ProtectedRoute allowedRoles={["production"]}>
+                <MonthlyPlanningForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-wagon-types"
+            element={
+              <ProtectedRoute allowedRoles={["production"]}>
+                <ManageWagonTypesScreen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/daily-production"
+            element={
+              <ProtectedRoute allowedRoles={["production"]}>
+                <DailyProductionForm />
+              </ProtectedRoute>
+            }
+          />
 
-          {/*<Route path="/sales-kpi" element={<SalesKPIScreen />} />
-           <Route path="/" element={<DashboardHome />} />*/}
+          {/* 🔒 Quality Module */}
+          <Route
+            path="/quality-dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["quality"]}>
+                <QualityDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bogie-inspection-form"
+            element={
+              <ProtectedRoute allowedRoles={["quality"]}>
+                <BogieInspectionForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bogie-inspection-report"
+            element={
+              <ProtectedRoute allowedRoles={["quality"]}>
+                <BogieInspectionReport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bogie-after-wheel-inspection"
+            element={
+              <ProtectedRoute allowedRoles={["quality"]}>
+                <BogiePostWheelInspectionForm />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 🚫 Redirect any unknown URL */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </LayoutWrapper>
     </Router>
   );
 }
+
 
 export default App;
