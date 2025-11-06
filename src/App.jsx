@@ -22,7 +22,7 @@ import DashboardHome from './screens/DashboardHome'; // adjust path as needed
 import SalesProdEntryForm from "./screens/sales/SalesProdEntryForm";
 import SalesProdDashboard from "./screens/sales/SalesProdDashboard";
 import BogiePostWheelInspectionForm from './screens/quality/BogiePostWheelInspectionForm';
-import TexmacoAccessPortal from './screens/Login';
+import TexmacoAccessPortal from './screens/login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
