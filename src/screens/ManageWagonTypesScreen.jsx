@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import axios from 'axios';
 
-const partsList = ['Underframe', 'Body Side', 'Body End', 'Roof', 'Wheel Set', 'Bogie', 'CRF Set', 'Coupler (Including DG 71)', 'Barrel', 'Brake System (ABE, SAB, ABP)', 'Huck Bolt (Lock Bolt)', 'Steel Set', 'Door'];
-const stagesList = ['UF Floor Weilding', 'Boxing', 'BMP', 'Wheeling & Visual Clearence', 'Shot Blasting & Primer', 'Final Painting & Lettering', 'Air Brake Testing', 'APD', 'PDI'];
+const partsList = ['Underframe', 'Body Side', 'Body End', 'Roof', 'Wheel Set', 'Bogie', 'CRF Set', 'Coupler (Including DG 71)', 'Barrel', 'Brake System (ABE, SAB, ABP)', 'Huck Bolt (Lock Bolt)', 'Steel Set', 'Hinge', 'Sub Assebly (Matching Set)', 'Lashing Chain', 'Door'];
+const stagesList = ['Floor Fit & Weilding', 'Reverse Welding', 'Air brake pipe fitting', 'Final Visual', 'DM', 'Boxing', 'BMP', 'Wheeling & Visual Clearence', 'Shot Blasting & Primer', 'Final Painting & Lettering', 'Air Brake Testing', 'APD', 'PDI'];
 
 const ManageWagonTypesScreen = () => {
   const [wagonType, setWagonType] = useState('');
