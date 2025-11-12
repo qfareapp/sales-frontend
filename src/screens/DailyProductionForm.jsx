@@ -260,12 +260,12 @@ if (hasNegativePreview) {
         </div>
 
         {/* Parts Manufactured Today */}
-        <h3 style={{ marginTop: 24, marginBottom: 12 }}>🧩 Parts Manufactured Today</h3>
+        <h3 style={{ marginTop: 24, marginBottom: 12 }}>🧩 Parts Manufactured/received Today</h3>
         {wagonConfig.parts?.length ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 8 }}>
             {wagonConfig.parts.map(p => (
               <React.Fragment key={p.name}>
-                <label style={{ display: 'flex', alignItems: 'center' }}>{p.name} produced:</label>
+                <label style={{ display: 'flex', alignItems: 'center' }}>{p.name} :</label>
                 <input
                   type="number"
                   min={0}
