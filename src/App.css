@@ -162,5 +162,92 @@ input, select, textarea {
   color: #555;
   margin-top: 4px;
 }
+/* KPI Grid Layout */
+.kpi-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+/* KPI Card Base */
+.kpi-card {
+  flex: 1 1 180px;
+  min-width: 180px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 1rem 1.2rem;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Highlighted (Primary) Card */
+.kpi-card.highlight {
+  background: linear-gradient(135deg, #0d47a1, #1565c0);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.3);
+}
+
+/* Header (Label + Icon) */
+.kpi-header {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Value (Main KPI Number) */
+.kpi-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin: 0.2rem 0;
+  white-space: nowrap;
+}
+
+/* Subtext */
+.kpi-sub {
+  font-size: 0.8rem;
+  color: #666;
+  opacity: 0.9;
+}
+
+/* Confidence Badge */
+.kpi-badge {
+  margin-top: 0.4rem;
+  font-weight: 600;
+}
+
+/* Colored Borders */
+.border-success {
+  border: 2px solid #2e7d32 !important;
+}
+.border-warning {
+  border: 2px solid #f9a825 !important;
+}
+.border-danger {
+  border: 2px solid #d32f2f !important;
+}
+
+/* Responsive Tweaks */
+@media (max-width: 992px) {
+  .kpi-card {
+    flex: 1 1 45%;
+  }
+}
+
+@media (max-width: 576px) {
+  .kpi-card {
+    flex: 1 1 100%;
+  }
+}
 
 }

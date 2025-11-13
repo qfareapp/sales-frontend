@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import "../App.css";
 import api from '../api';
 
 // 👉 Milestone label helper
@@ -126,6 +127,7 @@ export default function ProductionDetailsScreen() {
   const [stages, setStages] = useState([]);         // per-stage completion (overall)
   const [daily, setDaily] = useState([]);           // raw daily logs for the month
   const [milestones, setMilestones] = useState({});
+  const [wagonConfig, setWagonConfig] = useState(null);
 
 
 
@@ -141,6 +143,39 @@ const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const totalCompleted = pulloutDone + readyForPullout;
   const left = monthTarget > 0 ? Math.max(0, monthTarget - totalCompleted) : 0;
   const pct = monthTarget > 0 ? (100 * totalCompleted) / monthTarget : 0;
+
+    // --- KPI Computations ---
+  const workingDays = new Set(
+    daily
+      .filter(row => {
+        const d = new Date(row.date || row.createdAt || row.ts);
+        return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      })
+      .map(row => new Date(row.date || row.createdAt || row.ts).getDate())
+  ).size; // count of unique active days in month
+
+  const completed = pulloutDone + readyForPullout;
+  const targetAchievedPct = monthTarget > 0 ? (completed / monthTarget) * 100 : 0;
+  const avgDailyRate = workingDays > 0 ? completed / workingDays : 0;
+  const remaining = monthTarget - completed;
+
+  // estimate days needed at current rate
+  const estDaysToFinish =
+    avgDailyRate > 0 ? Math.ceil(remaining / avgDailyRate) : null;
+  const estCompletionDate =
+    estDaysToFinish !== null
+      ? new Date(today.getFullYear(), today.getMonth(), today.getDate() + estDaysToFinish)
+      : null;
+  // --- Performance Confidence Tag ---
+const confidence =
+  avgDailyRate > 0 && remaining > 0
+    ? targetAchievedPct >= 80
+      ? "🟢 On Track"
+      : targetAchievedPct >= 50
+      ? "🟡 Moderate"
+      : "🔴 Behind"
+    : "—";
+
 
   // 🔽 NEW: calculate bucket ranges dynamically for current month
 const monthName = new Date(selectedYear, selectedMonth).toLocaleString("default", {
@@ -193,74 +228,137 @@ const milestoneList = useMemo(() => {
 
 
   // Your canonical row orders (match the sheet)
-  const PART_ROWS = [
-    "Underframe", "Body Side", "Body End", "Roof", "Wheel set", "Bogie", "CRF Set", "Coupler (Including DG 71)", "Barrel", "Brake System (ABE, SAB, ABP)", "Huck Bolt (Lock Bolt)", "Steel Set", "Door" 
-  ];
-  const STAGE_ROWS = [
-    "Boxing", "BMP", "Wheeling & Visual Clearence",
-    "Shot Blasting & Primer", "Final Painting & Lettering",
-    "Air Brake Testing", "APD", "PDI"
-  ];
+    // Dynamically derive Parts & Stages from wagon configuration
+  const PART_ROWS = useMemo(() => {
+    return wagonConfig?.parts?.map(p => p.name) || [];
+  }, [wagonConfig]);
+
+  const STAGE_ROWS = useMemo(() => {
+    return wagonConfig?.stages?.map(s => s.name) || [];
+  }, [wagonConfig]);
+
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError('');
+  let mounted = true;
+  (async () => {
+    try {
+      setLoading(true);
+      setError('');
 
-        const [summaryRes, ordersRes, overallRes, planRes, invRes, stagesRes, dailyRes] = await Promise.all([
-  api.get(`/enquiries/project-summary/${encodeURIComponent(projectId)}`, { params: { ts: Date.now() } }),
-  api.get('/enquiries/orders'),
-  api.get(`/production/projects/${encodeURIComponent(projectId)}/overall`),
-  api.get(`/production/monthly-planning?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`),
-  api.get(`/inventory/available/${encodeURIComponent(projectId)}`),
-  api.get(`/production/stages/${encodeURIComponent(projectId)}?month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
-  api.get(`/production/daily?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
-]);
+      const [
+        summaryRes,
+        ordersRes,
+        overallRes,
+        planRes,
+        invRes,
+        stagesRes,
+        dailyRes,
+      ] = await Promise.all([
+        api.get(`/enquiries/project-summary/${encodeURIComponent(projectId)}`, { params: { ts: Date.now() } }),
+        api.get('/enquiries/orders'),
+        api.get(`/production/projects/${encodeURIComponent(projectId)}/overall`),
+        api.get(`/production/monthly-planning?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`),
+        api.get(`/inventory/available/${encodeURIComponent(projectId)}`),
+        api.get(`/production/stages/${encodeURIComponent(projectId)}?month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
+        api.get(`/production/daily?projectId=${encodeURIComponent(projectId)}&month=${selectedMonth + 1}&year=${selectedYear}`).catch(() => ({ data: [] })),
+      ]);
 
+      const ordersArray = Array.isArray(ordersRes.data?.orders) ? ordersRes.data.orders : [];
+      const proj =
+        ordersArray.find(
+          (o) =>
+            (o.projectId || '').toLowerCase().trim() ===
+            (projectId || '').toLowerCase().trim()
+        ) || null;
 
+      const planningArray = Array.isArray(planRes.data)
+        ? planRes.data
+        : Array.isArray(planRes.data?.data)
+        ? planRes.data.data
+        : [];
 
+      const plan =
+        planningArray.find(
+          (p) =>
+            (p.projectId || '').toLowerCase().trim() ===
+            (projectId || '').toLowerCase().trim()
+        ) || null;
 
-        const ordersArray = Array.isArray(ordersRes.data?.orders) ? ordersRes.data.orders : [];
-        const proj =
-          ordersArray.find(o => (o.projectId || '').toLowerCase().trim() === (projectId || '').toLowerCase().trim()) ||
-          null;
+      if (mounted) {
+        setMilestones(summaryRes?.data?.milestones || {});
+        setProject({
+          ...proj,
+          overallCompleted: human0(overallRes?.data?.overallCompleted),
+          overallPulloutDone: human0(overallRes?.data?.overallPulloutDone),
+          totalOrdered: human0(overallRes?.data?.totalOrdered),
+        });
+        setPlanning(plan);
+        setDaily(Array.isArray(dailyRes.data) ? dailyRes.data : []);
 
-        const planningArray = Array.isArray(planRes.data)
-          ? planRes.data
-          : Array.isArray(planRes.data?.data)
-          ? planRes.data.data
+        // ✅ 1. Fetch Wagon Config FIRST
+        let matchedConfig = null;
+        if (proj?.wagonType) {
+          try {
+            const configRes = await api.get(
+              `/wagons/${encodeURIComponent(proj.wagonType)}`
+            );
+            matchedConfig = configRes.data;
+            setWagonConfig(matchedConfig);
+          } catch (err) {
+            console.error('Failed to load wagon config', err);
+            setWagonConfig(null);
+          }
+        }
+
+        // ✅ 2. Then filter inventory and stages based on fetched config
+        const rawInventory = invRes.data || {};
+        const rawStages = Array.isArray(stagesRes.data)
+          ? stagesRes.data
           : [];
-        const plan =
-          planningArray.find(p => (p.projectId || '').toLowerCase().trim() === (projectId || '').toLowerCase().trim()) ||
-          null;
 
-        if (mounted) {
-           setMilestones(summaryRes?.data?.milestones || {});
-  setProject({
-    ...proj,
-    overallCompleted: human0(overallRes?.data?.overallCompleted),
-    overallPulloutDone: human0(overallRes?.data?.overallPulloutDone),
-    totalOrdered: human0(overallRes?.data?.totalOrdered),
-  });
-  setPlanning(plan);
-  setInventory(invRes.data || {});
-  setStages(Array.isArray(stagesRes.data) ? stagesRes.data : []);
-  setDaily(Array.isArray(dailyRes.data) ? dailyRes.data : []);
-}
+        let filteredInventory = rawInventory;
+        let filteredStages = rawStages;
 
-      } catch (e) {
-        if (mounted) setError(e?.response?.data?.message || e.message || 'Failed to load');
-      } finally {
-        if (mounted) setLoading(false);
+        if (matchedConfig?.parts?.length) {
+          const validParts = matchedConfig.parts.map((p) =>
+            p.name.toLowerCase()
+          );
+          filteredInventory = Object.fromEntries(
+            Object.entries(rawInventory).filter(([part]) =>
+              validParts.includes(part.toLowerCase())
+            )
+          );
+        }
+
+        if (matchedConfig?.stages?.length) {
+          const validStages = matchedConfig.stages.map((s) =>
+            s.name.toLowerCase()
+          );
+          filteredStages = rawStages.filter((s) =>
+            validStages.includes(
+              (s.stage || s.name || '').toLowerCase()
+            )
+          );
+        }
+
+        setInventory(filteredInventory);
+        setStages(filteredStages);
       }
-    })();
+    } catch (e) {
+      if (mounted)
+        setError(
+          e?.response?.data?.message || e.message || 'Failed to load'
+        );
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  })();
 
-    return () => {
-      mounted = false;
-    };
-  }, [projectId, selectedMonth, selectedYear]);
+  return () => {
+    mounted = false;
+  };
+}, [projectId, selectedMonth, selectedYear]);
+
 
   return (
     
@@ -332,6 +430,9 @@ const milestoneList = useMemo(() => {
           <div className="row g-3 mb-4">
   {!showOverall ? (
     <>
+      
+    
+
       {/* ===== Monthly Target View ===== */}
       <div className="col-md-3">
         <div className="card h-100">
@@ -382,7 +483,89 @@ const milestoneList = useMemo(() => {
           </div>
         </div>
       </div>
+ {/* ===== KPI Summary ===== */}
+<h5 className="fw-semibold border-bottom pb-2 mb-3">
+  📈 Key Production KPIs
+</h5>
+
+<div className="row row-cols-1 row-cols-sm-2 row-cols-md-5 g-3 mb-4 text-center">
+
+
+
+  {/* Target Achieved */}
+<div className="col">
+  <div className="card kpi-card h-100 shadow-sm d-flex align-items-center justify-content-center">
+    <div className="card-body d-flex flex-column align-items-center justify-content-center text-center">
+      <div className="text-muted small mb-2">Target Achieved</div>
+      <div className="kpi-percentage fw-bold mb-1">
+        {targetAchievedPct.toFixed(1)}%
+      </div>
+      <div className="progress-container w-75 mt-2">
+        <ProgressBar value={targetAchievedPct} />
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  {/* Average Daily Rate */}
+<div className="col">
+  <div className="card kpi-card h-100 shadow-sm d-flex align-items-center justify-content-center">
+    <div className="card-body d-flex flex-column align-items-center justify-content-center text-center">
+      <div className="text-muted small mb-2">Average Daily Rate</div>
+      <div className="kpi-rate fw-bold mb-1">
+        {avgDailyRate.toFixed(2)}
+      </div>
+      <div className="kpi-subtext text-muted small">
+        wagons/day over {workingDays} active days
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  {/* Estimated Completion */}
+<div className="col">
+  <div
+    className={`card kpi-card h-100 shadow-sm d-flex align-items-center justify-content-center ${
+      confidence.includes("🟢")
+        ? "border-success"
+        : confidence.includes("🟡")
+        ? "border-warning"
+        : confidence.includes("🔴")
+        ? "border-danger"
+        : ""
+    }`}
+  >
+    <div className="card-body d-flex flex-column align-items-center justify-content-center text-center">
+      <div className="text-muted small mb-2">Estimated Completion</div>
+
+      {estCompletionDate ? (
+        <>
+          <div className="kpi-date display-6 fw-bold mb-1">
+            {estCompletionDate.toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </div>
+          <div className="kpi-subtext text-muted small mb-1">
+            in ~{estDaysToFinish} days
+          </div>
+          <div className="kpi-status fw-semibold">{confidence}</div>
+        </>
+      ) : (
+        <div className="text-muted">—</div>
+      )}
+    </div>
+  </div>
+</div>
+
+</div>
+
+
     </>
+    
   ) : (
     <>
       {/* ===== Overall Project View ===== */}
@@ -583,37 +766,45 @@ const milestoneList = useMemo(() => {
       </tr>
     </thead>
     <tbody>
-      {/* Parts */}
-      <tr className="table-secondary">
-        <td colSpan={1 + dayLabels.length} className="fw-bold text-start">Part</td>
+
+      {!wagonConfig ? (
+  <tr>
+    <td colSpan={1 + dayLabels.length} className="text-center text-muted">
+      Loading wagon configuration…
+    </td>
+  </tr>
+) : (
+  PART_ROWS.map(name => {
+    const row = partsMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
+    return (
+      <tr key={name}>
+        <td className="text-start">{name}</td>
+        {dayLabels.map(range => <td key={range}>{row[range]}</td>)}
       </tr>
-      {PART_ROWS.map(name => {
-        const row = partsMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
-        return (
-          <tr key={name}>
-            <td className="text-start">{name}</td>
-            {dayLabels.map(range => (
-              <td key={range}>{row[range]}</td>
-            ))}
-          </tr>
-        );
-      })}
+    );
+  })
+)}
+
 
       {/* Stages */}
-      <tr className="table-secondary">
-        <td colSpan={1 + dayLabels.length} className="fw-bold text-start">Stages</td>
+      {!wagonConfig ? (
+  <tr>
+    <td colSpan={1 + dayLabels.length} className="text-center text-muted">
+      Loading wagon configuration…
+    </td>
+  </tr>
+) : (
+  STAGE_ROWS.map(name => {
+    const row = stagesMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
+    return (
+      <tr key={name}>
+        <td className="text-start">{name}</td>
+        {dayLabels.map(range => <td key={range}>{row[range]}</td>)}
       </tr>
-      {STAGE_ROWS.map(name => {
-        const row = stagesMatrix[name] || Object.fromEntries(dayLabels.map(r => [r, 0]));
-        return (
-          <tr key={name}>
-            <td className="text-start">{name}</td>
-            {dayLabels.map(range => (
-              <td key={range}>{row[range]}</td>
-            ))}
-          </tr>
-        );
-      })}
+    );
+  })
+)}
+
     </tbody>
   </table>
 </div>
