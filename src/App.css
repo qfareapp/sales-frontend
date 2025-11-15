@@ -249,5 +249,43 @@ input, select, textarea {
     flex: 1 1 100%;
   }
 }
+/* 🔥 Low Stock Ticker */
+.low-stock-ticker {
+  width: 100%;
+  overflow: hidden;
+  background: #ffeaea;           /* light red */
+  border: 1px solid #ffb3b3;
+  border-radius: 8px;
+  padding: 10px 0;
+  white-space: nowrap;
+  position: relative;
+}
+
+/* scrolling container */
+.ticker-content {
+  display: inline-block;
+  white-space: nowrap;
+  animation: tickerScroll 14s linear infinite;
+}
+
+/* item style */
+.ticker-item {
+  display: inline-block;
+  margin-right: 50px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #b30000;   /* deep red highlight */
+}
+
+/* Animation: Right → Left */
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(100%); 
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
 
 }

@@ -22,6 +22,10 @@ import DashboardHome from './screens/DashboardHome'; // adjust path as needed
 import SalesProdEntryForm from "./screens/sales/SalesProdEntryForm";
 import SalesProdDashboard from "./screens/sales/SalesProdDashboard";
 import BogiePostWheelInspectionForm from './screens/quality/BogiePostWheelInspectionForm';
+import EquipmentMaintenanceScreen from './screens/maintenance/EquipmentMaintenanceScreen';
+import EquipmentMasterForm from './screens/maintenance/EquipmentMasterForm';
+import MaintenanceDashboard from "./screens/maintenance/MaintenanceDashboard.jsx";
+import EquipmentMasterList from "./screens/maintenance/EquipmentMasterList";
 import TexmacoAccessPortal from './screens/login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
@@ -57,6 +61,8 @@ const LayoutWrapper = ({ children }) => {
   const [productionOpen, setProductionOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ for hamburger menu
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+
 
   if (isStandalone) {
     return <>{children}</>;
@@ -259,6 +265,52 @@ const LayoutWrapper = ({ children }) => {
         </ul>
       )}
     </li>
+
+    {/* ✅ Maintenance Menu (Independent) */}
+<li className="nav-item mt-3">
+  <span
+    onClick={() => setMaintenanceOpen?.(!maintenanceOpen)}
+    className="nav-link text-white fw-bold"
+    style={{ cursor: 'pointer' }}
+  >
+    🧰 Maintenance {maintenanceOpen ? '▲' : '▼'}
+  </span>
+
+  {maintenanceOpen && (
+    <ul className="nav flex-column ms-3">
+      <li>
+        <Link
+          to="/maintenance/equipment"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          🛠️ Equipment Maintenance Log
+        </Link>
+      </li>
+      <li>
+  <Link
+    to="/maintenance/equipment-master"
+    className="nav-link text-white"
+    onClick={handleLinkClick}
+  >
+    📦 Equipment Master
+  </Link>
+</li>
+<li>
+  <Link
+    to="/maintenance/dashboard"
+    className="nav-link text-white"
+    onClick={handleLinkClick}
+  >
+    📊 Maintenance Dashboard
+  </Link>
+</li>
+
+    </ul>
+  )}
+</li>
+
+
   </ul>
 </div>
     
@@ -402,6 +454,41 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* 🔒 Maintenance Module */}
+<Route
+  path="/maintenance/equipment"
+  element={
+    <ProtectedRoute allowedRoles={["maintenance", "production"]}>
+      <EquipmentMaintenanceScreen />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/maintenance/equipment-master"
+  element={
+    <ProtectedRoute allowedRoles={["maintenance", "production"]}>
+      <EquipmentMasterForm />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/maintenance/dashboard"
+  element={
+    <ProtectedRoute allowedRoles={["maintenance","production"]}>
+      <MaintenanceDashboard />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/maintenance/equipment-master-list"
+  element={
+    <ProtectedRoute allowedRoles={["maintenance", "production"]}>
+      <EquipmentMasterList />
+    </ProtectedRoute>
+  }
+/>
+
 
           {/* 🚫 Redirect any unknown URL */}
           <Route path="*" element={<Navigate to="/login" replace />} />
