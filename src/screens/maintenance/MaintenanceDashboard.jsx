@@ -184,8 +184,8 @@ const [lowStock, setLowStock] = useState([]);
             <h6>Top Reason</h6>
             <h5 className="text-primary">
               {failureReasons.length
-                ? failureReasons.sort((a, b) => b.value - a.value)[0].name
-                : "—"}
+  ? [...failureReasons].sort((a, b) => b.value - a.value)[0].name
+  : "—"}
             </h5>
           </div>
         </div>
@@ -248,7 +248,7 @@ const [lowStock, setLowStock] = useState([]);
         <h5>Failure Reasons Distribution</h5>
         <PieChart width={500} height={300}>
           <Pie
-            data={failureReasons}
+  data={[...failureReasons]}
             cx={200}
             cy={150}
             labelLine={false}
