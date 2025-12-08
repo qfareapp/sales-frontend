@@ -27,6 +27,8 @@ import EquipmentMasterForm from './screens/maintenance/EquipmentMasterForm';
 import MaintenanceDashboard from "./screens/maintenance/MaintenanceDashboard.jsx";
 import EquipmentMasterList from "./screens/maintenance/EquipmentMasterList";
 import TexmacoAccessPortal from './screens/login';
+import ManagementDashboard from './screens/management/ManagementDashboard';
+import LocationDashboard from './screens/management/LocationDashboard';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -62,6 +64,7 @@ const LayoutWrapper = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // ✅ for hamburger menu
   const [qualityOpen, setQualityOpen] = useState(false);
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false); // allow hiding the sidebar entirely
 
 
   if (isStandalone) {
@@ -93,6 +96,16 @@ const LayoutWrapper = ({ children }) => {
             ☰
           </button>
           <button
+            className="btn btn-sm btn-warning ms-2"
+            onClick={() => {
+              setSidebarHidden((prev) => !prev);
+              setSidebarOpen(false);
+            }}
+            title="Toggle sidebar visibility"
+          >
+            {sidebarHidden ? 'Show Menu' : 'Hide Menu'}
+          </button>
+          <button
   className="btn btn-sm btn-light ms-2"
   onClick={() => {
     localStorage.removeItem("token");
@@ -110,11 +123,18 @@ const LayoutWrapper = ({ children }) => {
 
 
       {/* Sidebar */}
+{!sidebarHidden && (
 <div className={`sidebar bg-dark text-white ${sidebarOpen ? 'open' : ''}`}>
   <ul className="nav flex-column mt-3">
     <li>
       <Link to="/" className="nav-link text-white" onClick={handleLinkClick}>
         📋 Home
+      </Link>
+    </li>
+
+    <li>
+      <Link to="/management" className="nav-link text-white" onClick={handleLinkClick}>
+        Management Dashboard
       </Link>
     </li>
 
@@ -313,10 +333,11 @@ const LayoutWrapper = ({ children }) => {
 
   </ul>
 </div>
+)}
     
 
       {/* Main content */}
-      <div className="main-content">{children}</div>
+      <div className={`main-content ${sidebarHidden ? 'sidebar-hidden' : ''}`}>{children}</div>
     </>
   );
 };
@@ -454,6 +475,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Management Module */}
+          <Route path="/management" element={<ManagementDashboard />} />
+          <Route path="/management/:siteId" element={<LocationDashboard />} />
 
           {/* 🔒 Maintenance Module */}
 <Route

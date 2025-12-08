@@ -47,6 +47,12 @@ body {
   padding: 80px 20px 20px 20px;
 }
 
+.main-content.sidebar-hidden {
+  margin-left: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
 .sidebar {
   position: fixed;
   top: 56px;
@@ -101,6 +107,7 @@ body {
 
   .main-content {
     margin-left: 0;
+    padding: 88px 14px 16px 14px;
   }
 
   .hamburger-btn {
@@ -351,5 +358,63 @@ body {
   .ticker-content {
     animation-duration: 20s;
   }
+
+  .main-content {
+    padding: 88px 12px 14px 12px;
+  }
+}
+
+.target-table th,
+.target-table td {
+  vertical-align: middle;
+}
+
+.target-progress {
+  max-width: 160px;
+  height: 10px;
+}
+
+/* Management Page styling */
+.management-page {
+  background: linear-gradient(135deg, #eef3ff 0%, #f6f8ff 60%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.management-hero {
+  background: radial-gradient(circle at 20% 20%, rgba(99, 126, 255, 0.3), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(255, 168, 88, 0.25), transparent 30%),
+              linear-gradient(135deg, #2d3a8c 0%, #1f6feb 80%);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(24, 42, 90, 0.25);
+}
+
+.letter-wide {
+  letter-spacing: 1px;
+}
+
+.no-print {
+  display: flex;
+}
+
+.html2canvas-container .no-print {
+  display: none !important;
+}
+
+.kpi-card {
+  color: #0f1d33;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-gradient-blue {
+  background: linear-gradient(135deg, #dce8ff 0%, #aac6ff 100%);
+}
+
+.kpi-gradient-green {
+  background: linear-gradient(135deg, #dff7ea 0%, #b4e4c9 100%);
+}
+
+.kpi-gradient-orange {
+  background: linear-gradient(135deg, #ffe6d5 0%, #ffc7a1 100%);
 }
 
