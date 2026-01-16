@@ -109,7 +109,7 @@ const QuizAdmin = () => {
               {candidate.resume?.url ? (
                 <a
                   className="quiz-admin-link"
-                  href={candidate.resume.url}
+                  href={`${import.meta.env.MODE === "production" ? "https://sales-backend-covv.onrender.com/api" : "http://localhost:5000/api"}/quiz/${candidate._id}/resume`}
                   target="_blank"
                   rel="noreferrer"
                   download={getDownloadName(candidate)}
