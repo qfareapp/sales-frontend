@@ -38,9 +38,14 @@ const QuizAdmin = () => {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
-    const format = candidate.resume?.format || "";
-    const ext = format.split("/")[1] || "pdf";
-    return `${base}-resume.${ext}`;
+    const original = candidate.resume?.originalName;
+    if (original) {
+      const ext = original.split(".").pop() || "pdf";
+      return `${base}-resume.${ext}`;
+    }
+    const url = candidate.resume?.url || "";
+    const urlExt = url.split(".").pop()?.split("?")[0] || "pdf";
+    return `${base}-resume.${urlExt}`;
   };
 
   if (loading) {
@@ -109,7 +114,7 @@ const QuizAdmin = () => {
                   rel="noreferrer"
                   download={getDownloadName(candidate)}
                 >
-                  View Resume
+                  Download Resume
                 </a>
               ) : (
                 <span className="muted">Not uploaded</span>
