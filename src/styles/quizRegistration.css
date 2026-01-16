@@ -1,0 +1,98 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+:root {
+  --quiz-register-ink: #1a1b2e;
+  --quiz-register-ink-soft: #3a3a57;
+  --quiz-register-sand: #f6f2ec;
+  --quiz-register-shadow: rgba(18, 20, 36, 0.16);
+}
+
+.quiz-register-page {
+  min-height: 100vh;
+  padding: 120px 24px 60px;
+  background: radial-gradient(circle at top, #fff0d6, transparent 60%),
+    radial-gradient(circle at bottom, #d9e9ff, transparent 55%),
+    linear-gradient(135deg, #fffaf5 0%, #f8f3ec 55%, #fff 100%);
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: var(--quiz-register-ink);
+}
+
+.quiz-register-card {
+  max-width: 860px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 28px;
+  padding: 36px;
+  box-shadow: 0 20px 45px var(--quiz-register-shadow);
+  border: 1px solid rgba(26, 27, 46, 0.08);
+}
+
+.quiz-register-header h1 {
+  font-family: "Fraunces", "Times New Roman", serif;
+  margin: 12px 0 8px;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+.quiz-register-kicker {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+  margin: 0;
+  color: var(--quiz-register-ink-soft);
+}
+
+.quiz-register-subtitle {
+  color: var(--quiz-register-ink-soft);
+  margin-bottom: 24px;
+}
+
+.quiz-register-form {
+  display: grid;
+  gap: 24px;
+}
+
+.quiz-register-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.quiz-register-field {
+  display: grid;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--quiz-register-ink-soft);
+}
+
+.quiz-register-field input,
+.quiz-register-field select {
+  border: 1px solid rgba(26, 27, 46, 0.18);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 1rem;
+  color: var(--quiz-register-ink);
+  background: #fff;
+}
+
+.quiz-register-submit {
+  justify-self: start;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #ff7a59, #ffbe5c);
+  color: #fff;
+  font-size: 1rem;
+  box-shadow: 0 12px 24px rgba(255, 122, 89, 0.25);
+}
+
+.quiz-register-error {
+  margin: 0;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .quiz-register-card {
+    padding: 24px;
+  }
+}
