@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import EnquiryForm from './components/EnquiryForm';
 import EnquiryListScreen from './screens/EnquiryListScreen';
@@ -29,6 +29,16 @@ import EquipmentMasterList from "./screens/maintenance/EquipmentMasterList";
 import TexmacoAccessPortal from './screens/login';
 import ManagementDashboard from './screens/management/ManagementDashboard';
 import LocationDashboard from './screens/management/LocationDashboard';
+import ManagementPresentation from './screens/ManagementPresentation';
+import ManagementDpr from './screens/ManagementDpr';
+import CsrActivities from './screens/CsrActivities';
+import MarketSegments from './screens/MarketSegments';
+import TexmacoCyientDpr from './screens/TexmacoCyientDpr';
+import DrainageMitigationReport from './screens/DrainageMitigationReport';
+import GlobalGrowthStrategy from './screens/GlobalGrowthStrategy';
+import QuizPage from './screens/QuizPage';
+import QuizRegistration from './screens/QuizRegistration';
+import QuizAdmin from './screens/QuizAdmin';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
@@ -56,7 +66,7 @@ function ProtectedRoute({ children, allowedRoles }) {
 
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
-  const standalonePaths = ['/daily-update', '/daily-production'];
+  const standalonePaths = ['/daily-update', '/daily-production', '/quiz', '/quiz-register'];
   const isStandalone = standalonePaths.includes(location.pathname);
 
   const [salesOpen, setSalesOpen] = useState(false);
@@ -65,7 +75,6 @@ const LayoutWrapper = ({ children }) => {
   const [qualityOpen, setQualityOpen] = useState(false);
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [sidebarHidden, setSidebarHidden] = useState(false); // allow hiding the sidebar entirely
-
 
   if (isStandalone) {
     return <>{children}</>;
@@ -79,7 +88,7 @@ const LayoutWrapper = ({ children }) => {
   };
 
   return (
-    <>
+    <div className={`app-shell ${sidebarHidden ? 'sidebar-hidden' : ''}`}>
       {/* Navbar */}
       <nav className="navbar custom-navbar fixed-top">
         <div className="container-fluid d-flex justify-content-between align-items-center">
@@ -106,15 +115,15 @@ const LayoutWrapper = ({ children }) => {
             {sidebarHidden ? 'Show Menu' : 'Hide Menu'}
           </button>
           <button
-  className="btn btn-sm btn-light ms-2"
-  onClick={() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    window.location.href = "/login";
-  }}
->
-  Logout
-</button>
+            className="btn btn-sm btn-light ms-2"
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("role");
+              window.location.href = "/login";
+            }}
+          >
+            Logout
+          </button>
           </span>
 
           
@@ -128,7 +137,22 @@ const LayoutWrapper = ({ children }) => {
   <ul className="nav flex-column mt-3">
     <li>
       <Link to="/" className="nav-link text-white" onClick={handleLinkClick}>
-        📋 Home
+        Home
+      </Link>
+    </li>
+    <li>
+      <Link to="/quiz-register" className="nav-link text-white" onClick={handleLinkClick}>
+        Quiz Registration
+      </Link>
+    </li>
+    <li>
+      <Link to="/quiz-admin" className="nav-link text-white" onClick={handleLinkClick}>
+        Quiz Admin
+      </Link>
+    </li>
+    <li>
+      <Link to="/management-presentation" className="nav-link text-white" onClick={handleLinkClick}>
+        dY"^ Management Presentation
       </Link>
     </li>
 
@@ -182,6 +206,69 @@ const LayoutWrapper = ({ children }) => {
           onClick={handleLinkClick}
         >
           📈 Production Dashboard
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/management-dpr"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Management DPR
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/csr-activities"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ CSR Activities
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/market-segments"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Market Segments
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/texmaco-cyient"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Texmaco x Cyient
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/global-growth-strategy"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Global Growth Strategy
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/board-strategy-slides"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Board Strategy Slides
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/drainage-mitigation"
+          className="nav-link text-white"
+          onClick={handleLinkClick}
+        >
+          dY"^ Drainage Mitigation
         </Link>
       </li>
         </ul>
@@ -338,7 +425,7 @@ const LayoutWrapper = ({ children }) => {
 
       {/* Main content */}
       <div className={`main-content ${sidebarHidden ? 'sidebar-hidden' : ''}`}>{children}</div>
-    </>
+    </div>
   );
 };
 
@@ -349,55 +436,68 @@ function App() {
         <Routes>
           {/* 🔓 Public Route */}
           <Route path="/login" element={<TexmacoAccessPortal />} />
+          <Route path="/management-presentation" element={<ManagementPresentation />} />
 
           {/* 🔒 Sales Module */}
           <Route
             path="/"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <EnquiryListScreen />
-              </ProtectedRoute>
-            }
+            element={<EnquiryListScreen />}
           />
           <Route
             path="/enquiry-form"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <EnquiryForm />
-              </ProtectedRoute>
-            }
+            element={<EnquiryForm />}
           />
           <Route
             path="/enquiry/:id"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <EnquiryUpdateForm />
-              </ProtectedRoute>
-            }
+            element={<EnquiryUpdateForm />}
           />
           <Route
             path="/daily-update"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <DailyUpdateForm />
-              </ProtectedRoute>
-            }
+            element={<DailyUpdateForm />}
+          />
+          <Route
+            path="/quiz-register"
+            element={<QuizRegistration />}
+          />
+          <Route
+            path="/quiz-admin"
+            element={<QuizAdmin />}
+          />
+          <Route
+            path="/quiz"
+            element={<QuizPage />}
           />
           <Route
             path="/sales/production-entry"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <SalesProdEntryForm />
-              </ProtectedRoute>
-            }
+            element={<SalesProdEntryForm />}
           />
           <Route
             path="/sales/production-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["sales"]}>
-                <SalesProdDashboard />
-              </ProtectedRoute>
-            }
+            element={<SalesProdDashboard />}
+          />
+          <Route
+            path="/management-dpr"
+            element={<ManagementDpr />}
+          />
+          <Route
+            path="/csr-activities"
+            element={<CsrActivities />}
+          />
+          <Route
+            path="/market-segments"
+            element={<MarketSegments />}
+          />
+          <Route
+            path="/texmaco-cyient"
+            element={<TexmacoCyientDpr />}
+          />
+          <Route
+            path="/global-growth-strategy"
+            element={<GlobalGrowthStrategy />}
+          />
+          <Route
+            path="/drainage-mitigation"
+            element={<DrainageMitigationReport />}
           />
 
           {/* 🔒 Production Module */}
@@ -525,3 +625,8 @@ function App() {
 
 
 export default App;
+
+
+
+
+

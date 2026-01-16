@@ -1,4 +1,4 @@
-#root {
+﻿#root {
 }
 
 .logo {
@@ -417,4 +417,7 @@ body {
 .kpi-gradient-orange {
   background: linear-gradient(135deg, #ffe6d5 0%, #ffc7a1 100%);
 }
+
+
+
 

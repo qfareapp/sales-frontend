@@ -1,0 +1,176 @@
+.tc-page {
+  --ink: #1d1b1f;
+  --muted: #595f6b;
+  --accent: #f26a4b;
+  --accent-2: #2e7d6b;
+  --panel: #ffffff;
+  --panel-2: #f4efe9;
+  --line: #e6d8cd;
+  --shadow: 0 18px 40px rgba(24, 24, 24, 0.08);
+  background:
+    radial-gradient(circle at 6% 12%, rgba(242, 106, 75, 0.15), transparent 52%),
+    radial-gradient(circle at 88% 8%, rgba(46, 125, 107, 0.12), transparent 60%),
+    linear-gradient(180deg, #fff6f0 0%, #f9faf7 100%);
+  min-height: 100vh;
+  padding: 26px;
+  color: var(--ink);
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+}
+
+.tc-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  background: linear-gradient(120deg, #1e1c20 0%, #2b2c33 100%);
+  color: #fef7f3;
+  border-radius: 22px;
+  padding: 26px 28px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.tc-hero::after {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(242, 106, 75, 0.7), transparent 65%);
+  opacity: 0.7;
+}
+
+.tc-kicker {
+  text-transform: uppercase;
+  letter-spacing: 1.8px;
+  font-size: 0.75rem;
+  margin-bottom: 10px;
+  color: rgba(254, 247, 243, 0.7);
+}
+
+.tc-hero h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.tc-subtitle {
+  max-width: 560px;
+  color: rgba(254, 247, 243, 0.8);
+  line-height: 1.5;
+}
+
+.tc-hero-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+  padding: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.tc-hero-card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.tc-hero-card ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: rgba(254, 247, 243, 0.75);
+  line-height: 1.5;
+}
+
+.tc-callout {
+  border-left: 4px solid var(--accent);
+  padding: 10px 14px;
+  background: rgba(242, 106, 75, 0.12);
+  border-radius: 12px;
+  color: rgba(254, 247, 243, 0.85);
+}
+
+.tc-section {
+  margin-top: 24px;
+}
+
+.tc-section h2 {
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+}
+
+.tc-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.tc-grid.two {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.tc-grid.three {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.tc-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.tc-card.alt {
+  background: var(--panel-2);
+}
+
+.tc-card h3 {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.tc-card h4 {
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.tc-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tc-partnerships {
+  display: grid;
+  gap: 16px;
+}
+
+.partnership-card {
+  background: linear-gradient(120deg, rgba(242, 106, 75, 0.08), rgba(46, 125, 107, 0.06));
+}
+
+.tc-outcome {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.tc-outcome span {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tc-outcome ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 768px) {
+  .tc-page {
+    padding: 18px;
+  }
+
+  .tc-hero h1 {
+    font-size: 1.6rem;
+  }
+}
