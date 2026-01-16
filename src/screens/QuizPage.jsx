@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import "../styles/quizPage.css";
@@ -109,6 +109,10 @@ const QuizPage = () => {
     }
   }, []);
   const candidateId = useMemo(() => localStorage.getItem("quizCandidateId"), []);
+  const completionKey = useMemo(
+    () => (candidateId ? `quizCompleted:${candidateId}` : null),
+    [candidateId]
+  );
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState(Array(questions.length).fill(null));
@@ -117,6 +121,29 @@ const QuizPage = () => {
   const [resumeFile, setResumeFile] = useState(null);
   const [resumeStatus, setResumeStatus] = useState("");
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [resumeSubmitted, setResumeSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!completionKey) return;
+    const completed = localStorage.getItem(completionKey) === "true";
+    if (!completed) return;
+
+    const storedScore = Number(localStorage.getItem(`${completionKey}:score`) || 0);
+    const storedAnswers = localStorage.getItem(`${completionKey}:answers`);
+    if (storedAnswers) {
+      try {
+        const parsed = JSON.parse(storedAnswers);
+        if (Array.isArray(parsed)) {
+          setAnswers(parsed);
+        }
+      } catch (error) {
+        // keep defaults if parsing fails
+      }
+    }
+    setScore(storedScore);
+    setShowResult(true);
+    setQuizSubmitted(true);
+  }, [completionKey]);
 
   const currentQuestion = questions[currentIndex];
   const selectedAnswer = answers[currentIndex];
@@ -148,11 +175,20 @@ const QuizPage = () => {
       const response = await api.post(`/quiz/submit/${candidateId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      if (completionKey && !localStorage.getItem(completionKey)) {
+        localStorage.setItem(completionKey, "true");
+        localStorage.setItem(`${completionKey}:score`, String(score));
+        localStorage.setItem(`${completionKey}:answers`, JSON.stringify(answers));
+      }
       if (file) {
-        setResumeStatus("Resume received. Thanks for sharing!");
+        setResumeStatus("Your resume has been submitted.");
+        setResumeSubmitted(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
       }
       if (response.data?.resumeUrl && file) {
-        setResumeStatus("Resume uploaded successfully.");
+        setResumeStatus("Your resume has been submitted.");
       }
       setQuizSubmitted(true);
     } catch (err) {
@@ -326,6 +362,13 @@ const QuizPage = () => {
                 {resumeStatus && (
                   <p className="quiz-resume-status">{resumeStatus}</p>
                 )}
+                {resumeSubmitted && (
+                  <img
+                    src="/Texmaco logo.png"
+                    alt="Texmaco"
+                    className="quiz-resume-logo"
+                  />
+                )}
               </div>
             </div>
           )}
@@ -336,4 +379,8 @@ const QuizPage = () => {
 };
 
 export default QuizPage;
+
+
+
+
 

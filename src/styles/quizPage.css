@@ -275,6 +275,11 @@
   font-size: 0.95rem;
 }
 
+.quiz-resume-logo {
+  height: 48px;
+  margin-top: 12px;
+}
+
 .quiz-side {
   display: grid;
   gap: 18px;
